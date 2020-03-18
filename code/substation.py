@@ -30,6 +30,7 @@ class Substation:
         self.sigma = None
         self.start = None
         self.end = None
+        self.coldest_days = []
         
     def add_residential_load(self, load_type, num = 1):
         if num > 0:
@@ -101,7 +102,7 @@ class Substation:
         
     def calculate_norm(self):
         if 'AggregatedLoad' not in self.dataframe.columns:
-            self.add_aggregated_col()
+            self.update_aggregated_col()
         mu, sigma = scipy.stats.norm.fit(self.dataframe['AggregatedLoad'].tolist())
         self.mu, self.sigma = round(mu,3), round(sigma,3)
         
@@ -114,9 +115,9 @@ class Substation:
     # Function which takes a dataframe where
     # each column represents a load and rows = date/time
     # returns same dataframe but with a aggregated column.
-    def add_aggregated_col(self):
+    def update_aggregated_col(self):
         self.dataframe.sort_index(inplace=True) # making sure df is sorted
-        self.dataframe['AggregatedLoad'] = self.dataframe.sum(numeric_only=True, axis=1) # add new sum col
+        self.dataframe['AggregatedLoad'] = self.dataframe.loc[:,range(1,self.load_count+1)].sum(numeric_only=True, axis=1) # update sum col
 
         
     def description(self):
@@ -163,8 +164,7 @@ class Substation:
                        weekday_plot = True, 
                        hour_plot = True):
         
-        if 'AggregatedLoad' not in self.dataframe.columns:
-            self.add_aggregated_col()
+        self.update_aggregated_col()
         if 'Month' not in self.dataframe.columns: 
             self.create_date_cols()
             
@@ -197,5 +197,84 @@ class Substation:
             'exec(%matplotlib notebook)'
             ax = sns.boxplot(data=self.dataframe, x='Hour', y='AggregatedLoad')
             ax.set_ylabel('kWh')
-            ax.set_title('Hourly comsumption of the substation')            
+            ax.set_title('Hourly comsumption of the substation')
+
+    ### ----- Flex-related ---------------------------------------
+    
+    def introduce_flexibility(self, 
+                              days = 17, 
+                              percent_loads = 0.5, 
+                              reduction = 0.65, 
+                              onlyDH = True):
+        '''
+        Dummy version for adding demand side flexibility trend to 
+        the substation. 'num' is the number of flexible days
+        per year which is then translated into from the coldest days
+        The model assumes a percentage of loads (default 50%) can be
+        flexible, which can be DH or not. Flexible is interpreted as 
+        reducing comsumption with a certain percentage (default 0.67) 
+        and then redistributedaccording to the slack parameter which 
+        is defined in hours.
+        '''
+        self.isFlex = True
+        if not self.coldest_days:
+            self.find_coldest_days(days)
+        
+        if onlyDH:
+            ID_list = self.get_loadID(noDH = True)
+        else:
+            ID_list = self.dataframe.columns #get all IDs
+
+        ID_list = self.remove_percentage_list(ID_list, percent_loads)
+        for ID in ID_list:
+            self.flex_count += 1
+            self.load_dict[ID].be_flexible(self.coldest_days, reduction)
+            #self.dataframe.loc[:,ID] = self.load_dict[ID].dataframe
+            self.dataframe.loc[self.dataframe.index.isin(self.load_dict[ID].dataframe.index), self.load_dict[ID].dataframe.columns] = self.load_dict[ID].dataframe.loc[self.load_dict[ID].dataframe.index.isin(self.dataframe.index), self.load_dict[ID].dataframe.columns].values
+
+        
+
+    def remove_percentage_list(self, thelist, percentage):
+        random.shuffle(thelist)
+        count = int(len(thelist) * percentage)
+        if not count: return []  # edge case, no elements removed
+        return thelist[-count:]        
+        
+    
+    def find_coldest_days(self, num):
+        '''
+        Function for finding the n (default same as number of flexible 
+        days: 17) coldest days per year in a region, which is then updated 
+        in the substation attribute 'coldest_days'. The path to the 
+        temperature data needs to be specified within the class
+        attribute 'region_path_dict'. The start and end of the timeframe to
+        check is determined by the start and end attributes of the object. 
+        '''
+        temp_data = pd.read_csv(self.region_path_dict[self.region], index_col = 0, parse_dates = True)
+
+        temp_data = temp_data[self.start:self.end]
+        temp_data['Year'] = temp_data.index.year
+        num_years = temp_data['Year'].nunique()
+        list_of_dates = []
+
+        for i in range(num_years):
+            year = self.start.year + i
+            year_data = temp_data.loc[temp_data['Year'] == year]
+            list_of_dates += year_data.nsmallest(num, columns='Temperature').index.sort_values().tolist()
+
+        self.coldest_days = list_of_dates
+
+        
+    def get_loadID(self, 
+                   noDH = False, 
+                   flex = False):
+        '''
+        Function that returns ID of loads of the substation
+        based on attribute.
+        '''
+        if noDH:
+            ID_list = [ID for ID,obj in self.load_dict.items() if not obj.isDH]
+        if flex:
+            ID_list = [ID for ID,obj in self.load_dict.items() if obj.isFlex]
+        return ID_list
             

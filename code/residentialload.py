@@ -13,6 +13,7 @@ class ResidentialLoad:
     
     # Initializer
     def __init__(self):
+        self.ID = None
         self.csv_path = None
         self.dataframe = pd.DataFrame()
         self.isDH = False
@@ -22,10 +23,26 @@ class ResidentialLoad:
     def description(self):
         return ('Residential Load of type {} with ID {}.'.format(self.__class__.__name__, self.ID))
     
-    def beFlexible(self):
-        if self.isFlex:
-            pass
+    def be_flexible(self, date_list, reduction):
+        self.isFlex = True
+        self.flexSlack = random.randint(4,7) #hours to freeze recovery, 4-6
+        self.flexRecover = random.randint(3,9) #hours to recover consumption, 3-8
+        self.dataframe.fillna(0, inplace = True) #move this to better spot
+        self.dataframe.index.map(lambda x: self.flex(x,date_list, reduction))
+
+
         
+    def flex(self, index, date_list, reduction): #implement moving comsumption to both before and after
+        if index.normalize() in date_list and index.hour in [17,18,19]: 
+            reduce = reduction * self.dataframe.loc[index].item() #from percent to value
+            self.dataframe.loc[index] -= reduce #reduce from peak
+            loc = self.dataframe.index.get_loc(index) 
+            i_start = - int(index.hour) + 19 + self.flexSlack #when to start adding
+            i_end = i_start + self.flexRecover #when to stop adding
+            reduce /= i_end #calculate hourly increase
+            self.dataframe.iloc[loc+i_start:loc+i_end] += reduce #increse
+
+            
     
 class HouseNew(ResidentialLoad):
     # Initializer
@@ -40,7 +57,9 @@ class HouseNew(ResidentialLoad):
                                      parse_dates = True, 
                                      usecols = [0,random.randrange(1,49,1)],
                                      skiprows = 1,
-                                     names = ['Date', self.__class__.__name__ + str(self.ID)])
+                                     names = ['Date', self.ID])
+        # previous column name including load type:
+        # self.__class__.__name__ + str(self.ID)
         
 class HouseOld(ResidentialLoad):
     # Initializer
@@ -55,7 +74,8 @@ class HouseOld(ResidentialLoad):
                                      parse_dates = True,
                                      usecols = [0, random.randrange(1,35,1)],
                                      skiprows = 1,
-                                     names = ['Date', self.__class__.__name__ + str(self.ID)])
+                                     names = ['Date', self.ID])
+
         
 class HouseDH(ResidentialLoad):
     # Initializer
@@ -70,11 +90,11 @@ class HouseDH(ResidentialLoad):
                                      parse_dates = True, 
                                      usecols = [0,random.randrange(1,37,1)],
                                      skiprows = 1,
-                                     names = ['Date', self.__class__.__name__ + str(self.ID)])
+                                     names = ['Date', self.ID])
         
         
 class ApartmentNewDH(ResidentialLoad):
-        # Initializer
+    # Initializer
     def __init__(self, ID):
         self.ID = ID
         self.csv_path = '../data/new_apartments_district_heating.csv'
@@ -86,5 +106,5 @@ class ApartmentNewDH(ResidentialLoad):
                                      parse_dates = True, 
                                      usecols = [0, random.randrange(1,35,1)],
                                      skiprows = 1,
-                                     names = ['Date', self.__class__.__name__ + str(self.ID)])
+                                     names = ['Date', self.ID])
     
