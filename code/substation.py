@@ -25,7 +25,8 @@ class Substation:
         self.flex_count = 0
         self.DH_count = 0
         self.region = region
-        self.isFlex = False
+        self.is_flex = False
+        self.is_efficient = False
         self.mu = None
         self.sigma = None
         self.start = None
@@ -112,12 +113,34 @@ class Substation:
         self.dataframe['Weekday'] = self.dataframe.index.weekday_name
         self.dataframe['Hour'] = self.dataframe.index.hour
         
-    # Function which takes a dataframe where
-    # each column represents a load and rows = date/time
-    # returns same dataframe but with a aggregated column.
+
     def update_aggregated_col(self):
+        '''
+        Function which takes a dataframe where
+        each column represents a load and rows = date/time
+        returns same dataframe but with a aggregated column.
+        '''
         self.dataframe.sort_index(inplace=True) # making sure df is sorted
         self.dataframe['AggregatedLoad'] = self.dataframe.loc[:,range(1,self.load_count+1)].sum(numeric_only=True, axis=1) # update sum col
+
+
+
+    def copy_load_stochastic(self, column_name, sigma=0.1, inplace = False):
+        '''
+        A function to copy a load profile with stochastic deviation
+        from the original. The values varies according to a gaussian 
+        distribution, with default and mu = 0, sigma = 0.1. The
+        funtion returns a copy of the dataframe with the new column.
+        '''
+        min_prob, max_prob = -sigma, sigma
+        prob_array = (max_prob - min_prob) * np.random.random_sample(size=dataframe.shape[0]) + min_prob
+        new_col_name = column_name + '_stoch_copy'
+        if inplace:
+            dataframe[column_name] += dataframe[column_name].mul(prob_array)
+        else:
+            dataframe[new_col_name] = dataframe[column_name] + dataframe[column_name].mul(prob_array)
+        
+
 
         
     def description(self):
@@ -169,7 +192,7 @@ class Substation:
             self.create_date_cols()
             
         if duration_curve:
-            col_lst = self.dataframe['AggregatedLoad'].sort_values().tolist()
+            col_lst = self.dataframe['AggregatedLoad'].sort_values(ascending=False).tolist()
             self.plot_load_duration_curve(col_lst)
     
         if month_plot:
@@ -216,7 +239,7 @@ class Substation:
         and then redistributedaccording to the slack parameter which 
         is defined in hours.
         '''
-        self.isFlex = True
+        self.is_flex = True
         if not self.coldest_days:
             self.find_coldest_days(days)
         
@@ -278,3 +301,18 @@ class Substation:
             ID_list = [ID for ID,obj in self.load_dict.items() if obj.isFlex]
         return ID_list
             
+
+    ### ----- Efficiency-related  ---------------------------------------
+
+    def introduce_efficiency(self, percent):
+
+        self.is_efficient = True
+
+        self.dataframe.loc[:,range(1,self.load_count+1)].apply(lambda x: x *(1-0.3), axis = 0)
+        
+
+
+
+
+
+    
