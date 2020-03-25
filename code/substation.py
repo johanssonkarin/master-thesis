@@ -22,6 +22,7 @@ class Substation:
         self.load_count = 0
         self.house_count = 0
         self.apartment_count = 0
+        self.office_count = 0
         self.flex_count = 0
         self.DH_count = 0
         self.region = region
@@ -95,7 +96,34 @@ class Substation:
                                                               right_index=True)
                         
             self.update_dates(self.dataframe.index[0],self.dataframe.index[-1])
+
+            
+    def add_office(self, start, end):
+        '''
+        Stupid function for creating office like load curves. 
+        '''
+        self.load_count += 1
+        self.office_count +=1
+        weekdaylist = [25,25,25,25,25,25,40,50,60,70,75,80,80,80,75,70,60,40,30,25,25,25,25,25]
+        weekendlist = [25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25]
         
+        ind=pd.date_range(start=start, freq='H', end=end)
+        dataframe = pd.DataFrame(index = ind)
+        dataframe['Weekday'] = dataframe.index.weekday_name
+        
+        for index, row in dataframe.iterrows():
+            loc = dataframe.index.get_loc(index)
+            if dataframe.shape[0] - loc >= 24: 
+                if row['Weekday'] in ['Monday', 'Tuesday','Wednesday','Thursday','Friday'] and index.hour in [0]:
+                    dataframe.loc[dataframe.iloc[loc:loc+24].index,'Office'] = weekdaylist
+                elif index.hour in [0]:
+                    dataframe.loc[dataframe.iloc[loc:loc+24].index,'Office'+ str(self.load_count)] = weekendlist
+                    
+        dataframe.fillna(25, inplace = True)
+        self.dataframe = self.dataframe.merge(dataframe, #add the office to the main
+                                              how = 'inner',
+                                              left_index=True,
+                                              right_index=True)
         
     def update_dates(self, start, end):
         self.start = start
@@ -133,12 +161,12 @@ class Substation:
         funtion returns a copy of the dataframe with the new column.
         '''
         min_prob, max_prob = -sigma, sigma
-        prob_array = (max_prob - min_prob) * np.random.random_sample(size=dataframe.shape[0]) + min_prob
+        prob_array = (max_prob - min_prob) * np.random.random_sample(size=self.dataframe.shape[0]) + min_prob
         new_col_name = column_name + '_stoch_copy'
         if inplace:
-            dataframe[column_name] += dataframe[column_name].mul(prob_array)
+            self.dataframe[column_name] += self.dataframe[column_name].mul(prob_array)
         else:
-            dataframe[new_col_name] = dataframe[column_name] + dataframe[column_name].mul(prob_array)
+            self.dataframe[new_col_name] = self.dataframe[column_name] + self.dataframe[column_name].mul(prob_array)
         
 
 
