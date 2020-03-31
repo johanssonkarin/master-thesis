@@ -1,4 +1,7 @@
 from residentialload import HouseNew, HouseOld, HouseDH, ApartmentNewDH
+from office import Office
+from PV import PV
+
 from matplotlib import pyplot as plt
 from importlib import reload
 import seaborn as sns
@@ -10,7 +13,6 @@ import scipy
 import math
 
 class Substation:
-
     
     # Class Attributes
     region_path_dict = {'Stockholm': '../data/stockholm_mintemp.csv'}
@@ -18,13 +20,17 @@ class Substation:
     # Initializer / Instance Attributes
     def __init__(self, region):
         self.load_dict = dict()
+        self.pv_dict = dict()
+        self.office_dict = dict()
         self.dataframe = pd.DataFrame()
+        self.ID_count = 0
         self.load_count = 0
         self.house_count = 0
         self.apartment_count = 0
         self.office_count = 0
         self.flex_count = 0
         self.DH_count = 0
+        self.PV_count = 0
         self.region = region
         self.is_flex = False
         self.is_efficient = False
@@ -33,15 +39,20 @@ class Substation:
         self.start = None
         self.end = None
         self.coldest_days = []
+
+
+
+    ###--------------- ADD LOADS ------------------------------
         
     def add_residential_load(self, load_type, num = 1):
         if num > 0:
             if load_type == 'HouseNew':
                 for i in range(0,num):
+                    self.ID_count += 1
                     self.load_count += 1
                     self.house_count += 1
-                    load = HouseNew(ID = self.load_count)
-                    self.load_dict[self.load_count] = load 
+                    load = HouseNew(ID = self.ID_count)
+                    self.load_dict[self.ID_count] = load 
                     
                     if self.dataframe.empty:
                         self.dataframe = load.dataframe
@@ -52,10 +63,11 @@ class Substation:
                                                               right_index=True)
             elif load_type == 'HouseOld':
                 for i in range(0,num):
+                    self.ID_count += 1
                     self.load_count += 1
                     self.house_count += 1
-                    load = HouseOld(ID = self.load_count)
-                    self.load_dict[self.load_count] = load 
+                    load = HouseOld(ID = self.ID_count)
+                    self.load_dict[self.ID_count] = load 
                     
                     if self.dataframe.empty:
                         self.dataframe = load.dataframe
@@ -66,11 +78,12 @@ class Substation:
                                                               right_index=True)
             elif load_type == 'HouseDH':
                 for i in range(0,num):
+                    self.ID_count += 1
                     self.load_count += 1
                     self.house_count += 1
                     self.DH_count += 1
-                    load = HouseDH(ID = self.load_count)
-                    self.load_dict[self.load_count] = load 
+                    load = HouseDH(ID = self.ID_count)
+                    self.load_dict[self.ID_count] = load 
                     
                     if self.dataframe.empty:
                         self.dataframe = load.dataframe
@@ -81,11 +94,12 @@ class Substation:
                                                               right_index=True)
             elif load_type == 'ApartmentNewDH':
                 for i in range(0,num):
+                    self.ID_count += 1
                     self.load_count += 1
                     self.apartment_count += 1
                     self.DH_count += 1
-                    load = ApartmentNewDH(ID = self.load_count)
-                    self.load_dict[self.load_count] = load 
+                    load = ApartmentNewDH(ID = self.ID_count)
+                    self.load_dict[self.ID_count] = load 
                     
                     if self.dataframe.empty:
                         self.dataframe = load.dataframe
@@ -98,40 +112,71 @@ class Substation:
             self.update_dates(self.dataframe.index[0],self.dataframe.index[-1])
 
             
-    def add_office(self, start, end):
+    def add_office(self, num = 1, randomize = True):
         '''
-        Stupid function for creating office like load curves. 
+        Stupid function for addinf office like load curves
+        to the substation.By default the offices are randomized
+        by a percentage drawn from a gaussion distribution
+        with mu = 0 and sigma = 0.1.
         '''
-        self.load_count += 1
-        self.office_count +=1
-        weekdaylist = [25,25,25,25,25,25,40,50,60,70,75,80,80,80,75,70,60,40,30,25,25,25,25,25]
-        weekendlist = [25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25]
+        for i in range(0,num):
+            self.ID_count += 1
+            self.office_count +=1
+
+            office = Office(start = self.start,
+                            end = self.end,
+                            ID = self.ID_count)
+
+            # Save office object to dict
+            self.office_dict[office.ID] = office
+            
+            if randomize:
+                office.be_random()
+
+            # Add office to substation dataframe
+            self.dataframe = self.dataframe.merge(office.dataframe, 
+                                                  how = 'inner',
+                                                  left_index=True,
+                                                  right_index=True)
         
-        ind=pd.date_range(start=start, freq='H', end=end)
-        dataframe = pd.DataFrame(index = ind)
-        dataframe['Weekday'] = dataframe.index.weekday_name
-        
-        for index, row in dataframe.iterrows():
-            loc = dataframe.index.get_loc(index)
-            if dataframe.shape[0] - loc >= 24: 
-                if row['Weekday'] in ['Monday', 'Tuesday','Wednesday','Thursday','Friday'] and index.hour in [0]:
-                    dataframe.loc[dataframe.iloc[loc:loc+24].index,'Office'] = weekdaylist
-                elif index.hour in [0]:
-                    dataframe.loc[dataframe.iloc[loc:loc+24].index,'Office'+ str(self.load_count)] = weekendlist
-                    
-        dataframe.fillna(25, inplace = True)
-        self.dataframe = self.dataframe.merge(dataframe, #add the office to the main
-                                              how = 'inner',
-                                              left_index=True,
-                                              right_index=True)
+
+    def add_PV(self, size, num = 1, randomize = True):
+        '''
+        Function for adding PV plants to the substation.
+        By default these are randomized by a percentage drawn
+        from a gaussion distribution (mu = 0, sigma = 0.1).
+        '''
+        for i in range(0,num):
+            self.ID_count += 1
+            self.PV_count += 1
+            
+            pv = PV(size = size,
+                    start = str(self.start).split(' ',1)[0],
+                    end = str(self.end).split(' ',1)[0],
+                    ID = self.ID_count)
+            
+            if randomize:
+                pv.be_random()
+
+            # Save PV object to dict
+            self.pv_dict[pv.ID] = pv
+            
+            # PV production means neagtive consumption. Merge negative values
+            pv_df_neg = pv.dataframe
+            pv_df_neg[pv.ID] *= (-1)
+            self.dataframe = self.dataframe.merge(pv_df_neg,
+                                                  how = 'inner',
+                                                  left_index=True,
+                                                  right_index=True)
+
+    ### ----------- SUBSTATION RELATED -------------------------------
         
     def update_dates(self, start, end):
         self.start = start
         self.end = end
         
     def calculate_norm(self):
-        if 'AggregatedLoad' not in self.dataframe.columns:
-            self.update_aggregated_col()
+        self.update_aggregated_col()
         mu, sigma = scipy.stats.norm.fit(self.dataframe['AggregatedLoad'].tolist())
         self.mu, self.sigma = round(mu,3), round(sigma,3)
         
@@ -149,7 +194,7 @@ class Substation:
         returns same dataframe but with a aggregated column.
         '''
         self.dataframe.sort_index(inplace=True) # making sure df is sorted
-        self.dataframe['AggregatedLoad'] = self.dataframe.loc[:,range(1,self.load_count+1)].sum(numeric_only=True, axis=1) # update sum col
+        self.dataframe['AggregatedLoad'] = self.dataframe.loc[:,self.dataframe.columns.isin(range(1,self.ID_count+1))].sum(numeric_only=True, axis=1) # update sum col
 
 
 
@@ -162,44 +207,77 @@ class Substation:
         '''
         min_prob, max_prob = -sigma, sigma
         prob_array = (max_prob - min_prob) * np.random.random_sample(size=self.dataframe.shape[0]) + min_prob
-        new_col_name = column_name + '_stoch_copy'
+        
         if inplace:
             self.dataframe[column_name] += self.dataframe[column_name].mul(prob_array)
         else:
+            new_col_name = str(column_name) + '_stoch_copy'
             self.dataframe[new_col_name] = self.dataframe[column_name] + self.dataframe[column_name].mul(prob_array)
         
 
 
         
     def description(self):
+        '''Returns a description of the substation object.'''
         if self.mu == None:
             self.calculate_norm()
         return ('Substation based on data from {} to {}.'.format(self.start,self.end)\
                + ' The substation contains {} loads with an '.format(self.load_count)\
                 + 'aggregated average comsumption of {} (-/+ {}) kWh per hour.'.format(self.mu,self.sigma))
+    
 
-    # Function cutting dataframe to whole years.
-    # By default jan-dec but can be changed to whole
-    # years from first date index. 
-    def filter_whole_years(self, jan_start = False):
+
+
+    def filter_whole_years(self, jan_start = False, num = 0):
+        '''
+        Function cutting dataframe to whole years.
+        By default jan-dec but can be changed to whole
+        years from first date index. The 'num'
+        parameter specifies number of years to keep
+        and needs to minimum 1. If num is not specified,
+        maximum number of years are kept. 
+        '''
         first_date, last_date = self.start, self.end
 
-        if jan_start:
-            start_date, end_date = str(first_date.year+1) +'-01-01', str(last_date.year-1) +'-12-31'
+        if num >= 1:
+            if jan_start:
+                if first_date.month in [1] and first_date.day in [1]:
+                    start_date = str(first_date.year) +'-01-01'
+                    end_date = str(first_date.year+num-1) +'-12-31'
+                else:
+                    start_date = str(first_date.year+1) +'-01-01'
+                    end_date = str(first_date.year+num) +'-12-31'
+            else:
+                start_date = str(first_date).split(' ',1)[0]
+                end_date = str(first_date + datetime.timedelta(days = (365 * num))).split(' ',1)[0]
+                
         else:
-            max_years = math.floor((last_date - first_date) / datetime.timedelta(days=365))
-            start_date = str(first_date).split(' ',1)[0]
-            end_date = str(first_date + datetime.timedelta(days = (365 * max_years))).split(' ',1)[0]
+            if jan_start:
+                if first_date.month in [1] and first_date.day in [1]:
+                    start_date = str(first_date.year) +'-01-01'
+                    end_date = str(last_date.year-1) +'-12-31'
+                else:
+                    start_date = str(first_date.year+1) +'-01-01'
+                    end_date = str(last_date.year-1) +'-12-31' 
+                
+            else:
+                max_years = math.floor((last_date - first_date) / datetime.timedelta(days=365))
+                start_date = str(first_date).split(' ',1)[0]
+                end_date = str(first_date + datetime.timedelta(days = (365 * max_years))).split(' ',1)[0]
 
         self.dataframe = self.dataframe[start_date:end_date]
         self.update_dates(self.dataframe.index[0],self.dataframe.index[-1])
 
+
         
-    # Function that takes a sorted list of load demand 
-    # values and produces a plot of the load duration curve.
+
     def plot_load_duration_curve(self,sorted_demand_list):
-        list_len = len(sorted_demand_list) #Number of datapoints
-        x = np.linspace(1,list_len,list_len).tolist() #List of hours
+        '''
+        Function that takes a sorted list of load demand 
+        values and produces a plot of the load duration curve.
+        '''
+        list_len = len(sorted_demand_list) # Number of datapoints
+        x = np.linspace(1,list_len,list_len).tolist() # List of hours
 
         plt.plot(x,sorted_demand_list)
         plt.title('Load Duration curve')
@@ -207,13 +285,18 @@ class Substation:
         plt.ylabel('Consumption [kWh]') #Review if kwh or not later on
         plt.show()
     
-    # Function for generating and printing different kinds of
-    # information about the dataframe and load profiles. 
+
+
+
     def print_insights(self, 
                        duration_curve = True,
                        month_plot = True, 
                        weekday_plot = True, 
                        hour_plot = True):
+        '''
+        Function for generating and printing different kinds of
+        information about the dataframe and load profiles. 
+        '''
         
         self.update_aggregated_col()
         if 'Month' not in self.dataframe.columns: 
@@ -250,13 +333,16 @@ class Substation:
             ax.set_ylabel('kWh')
             ax.set_title('Hourly comsumption of the substation')
 
-    ### ----- Flex-related ---------------------------------------
+
+            
+
+    ### ----- FLEX RELATED ---------------------------------------
     
     def introduce_flexibility(self, 
                               days = 17, 
                               percent_loads = 0.5, 
                               reduction = 0.65, 
-                              onlyDH = True):
+                              only_noDH = True):
         '''
         Dummy version for adding demand side flexibility trend to 
         the substation. 'num' is the number of flexible days
@@ -271,10 +357,10 @@ class Substation:
         if not self.coldest_days:
             self.find_coldest_days(days)
         
-        if onlyDH:
+        if only_noDH:
             ID_list = self.get_loadID(noDH = True)
         else:
-            ID_list = self.dataframe.columns #get all IDs
+            ID_list = self.get_loadID(residential = True) #get all IDs
 
         ID_list = self.remove_percentage_list(ID_list, percent_loads)
         for ID in ID_list:
@@ -290,6 +376,7 @@ class Substation:
         count = int(len(thelist) * percentage)
         if not count: return []  # edge case, no elements removed
         return thelist[-count:]        
+
         
     
     def find_coldest_days(self, num):
@@ -315,10 +402,12 @@ class Substation:
 
         self.coldest_days = list_of_dates
 
+
         
     def get_loadID(self, 
                    noDH = False, 
-                   flex = False):
+                   flex = False,
+                   residential = False):
         '''
         Function that returns ID of loads of the substation
         based on attribute.
@@ -327,16 +416,19 @@ class Substation:
             ID_list = [ID for ID,obj in self.load_dict.items() if not obj.isDH]
         if flex:
             ID_list = [ID for ID,obj in self.load_dict.items() if obj.isFlex]
+        if residential:
+            ID_list = [ID for ID,obj in self.load_dict.items()]
         return ID_list
+
             
 
-    ### ----- Efficiency-related  ---------------------------------------
+    ### ----- EFFICIENCY RELATED ---------------------------------------
 
     def introduce_efficiency(self, percent):
 
         self.is_efficient = True
 
-        self.dataframe.loc[:,range(1,self.load_count+1)].apply(lambda x: x *(1-0.3), axis = 0)
+        self.dataframe.loc[:,self.dataframe.columns.isin(range(1,self.load_count+1))].apply(lambda x: x *(1-0.3), axis = 0)
         
 
 
