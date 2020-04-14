@@ -14,8 +14,7 @@ import math
 
 class Substation:
     
-    # Class Attributes
-    region_path_dict = {'Stockholm': '../data/stockholm_mintemp.csv'}
+    
     
     # Initializer / Instance Attributes
     def __init__(self, region):
@@ -39,6 +38,7 @@ class Substation:
         self.start = None
         self.end = None
         self.coldest_days = []
+        self.region_path = '../data/'+region+'/min_temp.csv'
 
 
 
@@ -51,7 +51,7 @@ class Substation:
                     self.ID_count += 1
                     self.load_count += 1
                     self.house_count += 1
-                    load = HouseNew(ID = self.ID_count)
+                    load = HouseNew(region = self.region, ID = self.ID_count)
                     self.load_dict[self.ID_count] = load 
                     
                     if self.dataframe.empty:
@@ -66,7 +66,7 @@ class Substation:
                     self.ID_count += 1
                     self.load_count += 1
                     self.house_count += 1
-                    load = HouseOld(ID = self.ID_count)
+                    load = HouseOld(region = self.region, ID = self.ID_count)
                     self.load_dict[self.ID_count] = load 
                     
                     if self.dataframe.empty:
@@ -82,7 +82,7 @@ class Substation:
                     self.load_count += 1
                     self.house_count += 1
                     self.DH_count += 1
-                    load = HouseDH(ID = self.ID_count)
+                    load = HouseDH(region = self.region, ID = self.ID_count)
                     self.load_dict[self.ID_count] = load 
                     
                     if self.dataframe.empty:
@@ -98,7 +98,7 @@ class Substation:
                     self.load_count += 1
                     self.apartment_count += 1
                     self.DH_count += 1
-                    load = ApartmentNewDH(ID = self.ID_count)
+                    load = ApartmentNewDH(region = self.region, ID = self.ID_count)
                     self.load_dict[self.ID_count] = load 
                     
                     if self.dataframe.empty:
@@ -151,6 +151,7 @@ class Substation:
             self.PV_count += 1
             
             pv = PV(size = size,
+                    region = self.region,
                     start = str(self.start).split(' ',1)[0],
                     end = str(self.end).split(' ',1)[0],
                     ID = self.ID_count)
@@ -362,7 +363,7 @@ class Substation:
         else:
             ID_list = self.get_loadID(residential = True) #get all IDs
 
-        ID_list = self.remove_percentage_list(ID_list, percent_loads)
+        ID_list = self.remove_list_element(ID_list, percentage = percent_loads)
         for ID in ID_list:
             self.flex_count += 1
             self.load_dict[ID].be_flexible(self.coldest_days, reduction)
@@ -371,9 +372,12 @@ class Substation:
 
         
 
-    def remove_percentage_list(self, thelist, percentage):
+    def remove_list_element(self, thelist, percentage = None, num = None):
         random.shuffle(thelist)
-        count = int(len(thelist) * percentage)
+        if percentage:
+            count = int(len(thelist) * percentage)
+        elif num:
+            count = num
         if not count: return []  # edge case, no elements removed
         return thelist[-count:]        
 
@@ -388,7 +392,7 @@ class Substation:
         attribute 'region_path_dict'. The start and end of the timeframe to
         check is determined by the start and end attributes of the object. 
         '''
-        temp_data = pd.read_csv(self.region_path_dict[self.region], index_col = 0, parse_dates = True)
+        temp_data = pd.read_csv(self.region_path, index_col = 0, parse_dates = True)
 
         temp_data = temp_data[self.start:self.end]
         temp_data['Year'] = temp_data.index.year
@@ -407,28 +411,43 @@ class Substation:
     def get_loadID(self, 
                    noDH = False, 
                    flex = False,
-                   residential = False):
+                   residential = False,
+                   office = False):
         '''
         Function that returns ID of loads of the substation
         based on attribute.
         '''
+        ID_list = []
+        
         if noDH:
-            ID_list = [ID for ID,obj in self.load_dict.items() if not obj.isDH]
+            ID_list += [ID for ID,obj in self.load_dict.items() if not obj.is_DH]
         if flex:
-            ID_list = [ID for ID,obj in self.load_dict.items() if obj.isFlex]
+            ID_list += [ID for ID,obj in self.load_dict.items() if obj.is_flex]
         if residential:
-            ID_list = [ID for ID,obj in self.load_dict.items()]
+            ID_list += [ID for ID,obj in self.load_dict.items()]
+        if office:
+            ID_list += [ID for ID in self.office_dict.keys()]
+            
         return ID_list
 
             
 
     ### ----- EFFICIENCY RELATED ---------------------------------------
 
-    def introduce_efficiency(self, percent):
+    def introduce_efficiency(self, num = None, percent = 0.3):
+        '''
+        Simulating the efficiency trend. percent is the percentage
+        of comsumption to reduce. And num is the number of loads to reduce.
+        Percent indicates the reduction of consumption, 0.3 by default.
+        '''
 
         self.is_efficient = True
+        ID_list = self.get_loadID(residential = True,
+                                  office = True)
+        if num:
+            ID_list = self.remove_list_element(ID_list, num = num)
 
-        self.dataframe.loc[:,self.dataframe.columns.isin(range(1,self.load_count+1))].apply(lambda x: x *(1-0.3), axis = 0)
+        self.dataframe.loc[:,ID_list] = self.dataframe.loc[:, ID_list].apply(lambda x: x *(1-percent), axis = 0)
         
 
 

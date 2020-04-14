@@ -9,6 +9,8 @@ class PV:
  
         size: 
             an int: 69/400/868 and represents m2.
+        reigon:
+            string of region e.g. 'Stockholm'
         start:
             string of date e.g. '2016-01-01'
         end:
@@ -17,12 +19,8 @@ class PV:
             int which should be unique
             
     '''
-    # Nameing here? e.g. 400 vs medium etc.
-    path_dict = {69 : '../data/PV/pv69prod.csv' ,
-                 400 : '../data/PV/pv400prod.csv',
-                 868 : '../data/PV/pv868prod.csv'}
 
-    def __init__(self, size, start, end, ID):
+    def __init__(self, region, size, start, end, ID):
         self.size = size
         self.ID = ID
         self.start = start
@@ -33,6 +31,9 @@ class PV:
                                                             end = end, 
                                                             freq = 'H'),
                                       columns = [self.ID])
+        self.path_dict = {69 : '../data/' + region + '/PV/pv69prod.csv' ,
+                          400 : '../data/' + region + '/PV/pv400prod.csv',
+                          868 : '../data/' + region + '/PV/pv868prod.csv'}
         self.populate_dataframe()
 
     def populate_dataframe(self):
