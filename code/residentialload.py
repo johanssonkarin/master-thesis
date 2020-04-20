@@ -94,9 +94,9 @@ class HouseDH(ResidentialLoad):
     def __init__(self, region, ID):
         self.ID = ID
         self.csv_path = '../data/'+region+'/Loads/mixed_ages_houses_district_heating.csv'
-        self.isDH = True
-        self.isFlex = False
-        self.isNew = False
+        self.is_DH = True
+        self.is_flex = False
+        self.is_new = False
         self.dataframe = pd.read_csv(self.csv_path, 
                                      index_col = 0, 
                                      parse_dates = True, 

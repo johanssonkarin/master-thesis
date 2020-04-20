@@ -1,5 +1,6 @@
 from residentialload import HouseNew, HouseOld, HouseDH, ApartmentNewDH
 from office import Office
+from EV import EVStations
 from PV import PV
 
 from matplotlib import pyplot as plt
@@ -227,6 +228,40 @@ class Substation:
                                                   left_index=True,
                                                   right_index=True)
 
+    def add_EV(self, num_EV, num_parkingloc):
+        '''
+        Function for adding EV charging stations,
+        atm equvivalent to number of parking locations.
+        
+        Parameters
+        ----------
+            num_EV: int
+                Number of EVs to charge.
+            num_parkingloc: int
+                Number of locations to charge the EVs.
+        '''
+        self.EV_count = num_EV
+        
+        ev = EVStations(numberOfEVs = num_EV,
+                        numberOfparkingloc = num_parkingloc,
+                        start = self.start,
+                        end = self.end,
+                        region = self.region
+                        )
+        
+        ev.dataframe.rename(columns=[i for i in range(self.ID_count,self.ID_count+num_parkingloc)],
+                            inplace = True)
+
+        self.ID_count += num_parkingloc
+
+        self.dataframe = self.dataframe.merge(ev.dataframe,
+                                              how = 'inner',
+                                              left_index=True,
+                                              right_index=True)
+        
+        
+        
+
     ### ----------- SUBSTATION RELATED -------------------------------
         
     def update_dates(self, start, end):
@@ -242,7 +277,7 @@ class Substation:
     def create_date_cols(self):
         self.dataframe['Year'] = self.dataframe.index.year
         self.dataframe['Month'] = self.dataframe.index.month
-        self.dataframe['Weekday'] = self.dataframe.index.weekday_name
+        self.dataframe['Weekday'] = self.dataframe.index.day_name()
         self.dataframe['Hour'] = self.dataframe.index.hour
 
 

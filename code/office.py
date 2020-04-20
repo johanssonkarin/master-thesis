@@ -26,7 +26,7 @@ class Office:
 
 
     def populate_dataframe(self):
-        self.dataframe['Weekday'] = self.dataframe.index.weekday_name
+        self.dataframe['Weekday'] = self.dataframe.index.day_name()
         
         for index, row in self.dataframe.iterrows():
             loc = self.dataframe.index.get_loc(index)
