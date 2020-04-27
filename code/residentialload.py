@@ -52,7 +52,6 @@ class ResidentialLoad:
                 j_end = j_start + self.flexRecover #when to stop adding
                 reduce /= j_end #calculate hourly increase
                 self.dataframe.iloc[loc+j_start:loc+j_end] += reduce #increse
-        
 
             
     

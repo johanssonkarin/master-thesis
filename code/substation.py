@@ -53,7 +53,9 @@ class Substation:
     DH_count: int
         Number of loads with district heatning.
     PV_count: int
-        Number of PV plants. 
+        Number of PV plants.
+    EV_count: int
+        Number of EVs in the Substation.
     region: str
         Where the substation is located,
     is_flex: bool
@@ -88,6 +90,7 @@ class Substation:
         self.flex_count = 0
         self.DH_count = 0
         self.PV_count = 0
+        self.EV_count = 0
         self.region = region
         self.is_flex = False
         self.is_efficient = False
@@ -228,10 +231,9 @@ class Substation:
                                                   left_index=True,
                                                   right_index=True)
 
-    def add_EV(self, num_EV, num_parkingloc):
+    def add_EV(self, num_EV, num_parkingloc, mpg_mu = 0.2, mpg_sigma = 0.05):
         '''
-        Function for adding EV charging stations,
-        atm equvivalent to number of parking locations.
+        Function for adding EV charging stations.
         
         Parameters
         ----------
@@ -246,14 +248,14 @@ class Substation:
                         numberOfparkingloc = num_parkingloc,
                         start = self.start,
                         end = self.end,
-                        region = self.region
+                        region = self.region,
+                        mpgMu = mpg_mu,
+                        mpgSigma = mpg_sigma
                         )
         
-        ev.dataframe.rename(columns=[i for i in range(self.ID_count,self.ID_count+num_parkingloc)],
-                            inplace = True)
+        ev.dataframe.columns = [i for i in range(self.ID_count+1,self.ID_count+num_parkingloc+1)]
 
         self.ID_count += num_parkingloc
-
         self.dataframe = self.dataframe.merge(ev.dataframe,
                                               how = 'inner',
                                               left_index=True,
@@ -391,11 +393,12 @@ class Substation:
         list_len = len(sorted_demand_list) # Number of datapoints
         x = np.linspace(1,list_len,list_len).tolist() # List of hours
 
-        plt.plot(x,sorted_demand_list)
+        
         plt.title('Load Duration curve')
         plt.xlabel('Hours')
         plt.ylabel('Consumption [kWh]') #Review if kwh or not later on
-        plt.show()
+
+        plt.plot(x,sorted_demand_list)
     
 
 
@@ -416,7 +419,7 @@ class Substation:
             
         if duration_curve:
             col_lst = self.dataframe['AggregatedLoad'].sort_values(ascending=False).tolist()
-            self.plot_load_duration_curve(col_lst)
+            return self.plot_load_duration_curve(col_lst)
     
         if month_plot:
            # 'exec(%matplotlib inline)'
@@ -478,8 +481,8 @@ class Substation:
         for ID in ID_list:
             self.flex_count += 1
             self.load_dict[ID].be_flexible(self.coldest_days, reduction)
-            #self.dataframe.loc[:,ID] = self.load_dict[ID].dataframe
-            self.dataframe.loc[self.dataframe.index.isin(self.load_dict[ID].dataframe.index), self.load_dict[ID].dataframe.columns] = self.load_dict[ID].dataframe.loc[self.load_dict[ID].dataframe.index.isin(self.dataframe.index), self.load_dict[ID].dataframe.columns].values
+            self.dataframe.loc[:,ID] = self.load_dict[ID].dataframe
+            #self.dataframe.loc[self.dataframe.index.isin(self.load_dict[ID].dataframe.index), self.load_dict[ID].dataframe.columns] = self.load_dict[ID].dataframe.loc[self.load_dict[ID].dataframe.index.isin(self.dataframe.index), self.load_dict[ID].dataframe.columns].values
 
         
 

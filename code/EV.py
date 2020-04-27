@@ -24,13 +24,21 @@ from spatialModelPkg.auxiliary import collect_stations_results
 
 class EVStations:
 
-    def __init__(self, ID, numberOfEVs, numberOfparkingloc, start, end, region):
-        self.ID = ID
+    def __init__(self, 
+                 numberOfEVs, 
+                 numberOfparkingloc, 
+                 start, 
+                 end, 
+                 region, 
+                 mpgMu = 0.2, 
+                 mpgSigma = 0.05):
         self.region = region
         self.numberOfEVs = numberOfEVs
         self.numberOfparkingloc = numberOfparkingloc
         self.start = start
         self.end = end
+        self.mpgMu = mpgMu
+        self.mpgSigma = mpgSigma
         self.dataframe = self.create_EV_data()
 
     def create_EV_data(self):
@@ -38,11 +46,15 @@ class EVStations:
         numberOfparkingloc = self.numberOfparkingloc
         start = self.start
         end = self.end
-        
+        # station types: 0 = home, 1 = work, 2 = other
+        chargingPowerDict = {0:3.7,
+                             1:3.7,
+                             2:11.0}
+
         stationTypes = rnd.choices(range(3), k = numberOfparkingloc)
         stationsList = [(i, ParkingLot(ID = i,
-                               state = stationTypes[i],
-                               chargingPower = 3.7,
+                               state = stationTypes[i],#type of station home,work & other
+                               chargingPower = chargingPowerDict[stationTypes[i]],
                                maximumOccupancy = numberOfEVs,
                                currentOccupancy = 0))
                     for i in range(numberOfparkingloc)]
@@ -60,17 +72,17 @@ class EVStations:
         # create cars
         EVs = [EV(currentLocation = None,
                   currentState = None,
-                  mpg = 0.2)
+                  mpg = np.random.normal(self.mpgMu,self.mpgSigma))
                for i in range (numberOfEVs)]
 
         # distribute the cars on the stations with state zero
         [x.inital_conditions(stations,0) for x in EVs]
 
         # load the weekday distances filter >200km
-        weekdayDistances = extractDistances('../data/'+self.region+'/EV/distanceData/*day*.txt', 200)
+        weekdayDistances = extractDistances('../data/'+self.region+'/EV/DistanceData/*day*.txt', 200)
 
         # load the weekend distances filter >200km
-        weekendDistances = extractDistances('../data/'+self.region+'/EV/distanceData/*end*.txt', 200)
+        weekendDistances = extractDistances('../data/'+self.region+'/EV/DistanceData/*end*.txt', 200)
 
         # Create a distance Dictionary, if the key is true, use weekday distances,
         # else use weekend distances.
@@ -92,7 +104,7 @@ class EVStations:
                  False: weekend}
 
         # simulate one week
-        minutes = pd.date_range(start, end, freq='min', tz='CET')[:-1]
+        minutes = pd.date_range(start, end, freq='min')[:-1]
         numberOfDays = (minutes[-1] - minutes[0]).days
 
 
@@ -109,8 +121,8 @@ class EVStations:
         # Estimate the electric load
         load = simulationCase.simulate_model()
         
-        #ID_list = [str(i) for i in range(numberOfparkingloc)]
-        #print(ID_list)
-        #results = collect_stations_results(ID_list, load, stations)
+        # Create dataframe of load and aggregate to hour for compatability
+        # Using mean() since the current load is in energy.
+        dataframe = pd.DataFrame(load, index=minutes).resample('H').mean()
         
-        return pd.DataFrame(load, index=minutes).resample('H').sum()
+        return dataframe
