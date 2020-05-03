@@ -10,7 +10,8 @@ class PV:
     Attributes
     -----------
         size: 
-            an int: 69/400/868 and represents m2.
+            an int: 69/400/868 and represents m2
+            of the panels.
         reigon:
             string of region e.g. 'Stockholm'
         start:

@@ -16,7 +16,7 @@ import math
 class Substation:
     '''
     Substation class.
-    This class represents an electrical substation.
+    This class represents an secondary substation.
 
     Parameters
     ----------
