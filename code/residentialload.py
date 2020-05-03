@@ -52,7 +52,6 @@ class ResidentialLoad:
                 j_end = j_start + self.flexRecover #when to stop adding
                 reduce /= j_end #calculate hourly increase
                 self.dataframe.iloc[loc+j_start:loc+j_end] += reduce #increse
-        
 
             
     
@@ -94,9 +93,9 @@ class HouseDH(ResidentialLoad):
     def __init__(self, region, ID):
         self.ID = ID
         self.csv_path = '../data/'+region+'/Loads/mixed_ages_houses_district_heating.csv'
-        self.isDH = True
-        self.isFlex = False
-        self.isNew = False
+        self.is_DH = True
+        self.is_flex = False
+        self.is_new = False
         self.dataframe = pd.read_csv(self.csv_path, 
                                      index_col = 0, 
                                      parse_dates = True, 

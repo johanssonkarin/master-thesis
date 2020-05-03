@@ -1,5 +1,6 @@
 from residentialload import HouseNew, HouseOld, HouseDH, ApartmentNewDH
 from office import Office
+from EV import EVStations
 from PV import PV
 
 from matplotlib import pyplot as plt
@@ -13,7 +14,66 @@ import scipy
 import math
 
 class Substation:
+    '''
+    Substation class.
+    This class represents an secondary substation.
+
+    Parameters
+    ----------
+    region : str
+        Location of the substation, e.g. 'Stockholm',
+        needs to match data folder name.    
     
+    
+    Attributes
+    ----------
+    load_dict: dict
+        Contains all residential load objects.
+        IDs are keys.
+    pv_dict: dict
+        Contains all PV objects.
+        IDs are keys.
+    office_dict: dict
+        Contains all PV objects.
+        IDs are keys.
+    dataframe: pandas DataFrame
+        Every object is a column. DateTimeIndex.
+    ID_count: int
+        Keeps track of IDs.
+    load_count: int
+        Number of residential loads.
+    house_count: int
+        Number of residential houses.
+    apartment_count: int
+        Number of appartments.
+    office_count: int
+        Number of offices.
+    flex_count:
+        Number of flexible agents.
+    DH_count: int
+        Number of loads with district heatning.
+    PV_count: int
+        Number of PV plants.
+    EV_count: int
+        Number of EVs in the Substation.
+    region: str
+        Where the substation is located,
+    is_flex: bool
+        If there are flexible loads in the substation.
+    is_efficient: bool
+        If the substation makes loads more efficent.
+    mu: float
+        The average hourly consumption of the
+        substation.
+    sigma: float
+        Standard deviation of hourly cosumption of
+        the substation.
+    start: str
+        Start date of the time series data.
+    end: 
+        End date of the time series data.
+    
+    '''
     
     
     # Initializer / Instance Attributes
@@ -30,6 +90,7 @@ class Substation:
         self.flex_count = 0
         self.DH_count = 0
         self.PV_count = 0
+        self.EV_count = 0
         self.region = region
         self.is_flex = False
         self.is_efficient = False
@@ -170,6 +231,39 @@ class Substation:
                                                   left_index=True,
                                                   right_index=True)
 
+    def add_EV(self, num_EV, num_parkingloc, mpg_mu = 0.2, mpg_sigma = 0.05):
+        '''
+        Function for adding EV charging stations.
+        
+        Parameters
+        ----------
+            num_EV: int
+                Number of EVs to charge.
+            num_parkingloc: int
+                Number of locations to charge the EVs.
+        '''
+        self.EV_count = num_EV
+        
+        ev = EVStations(numberOfEVs = num_EV,
+                        numberOfparkingloc = num_parkingloc,
+                        start = self.start,
+                        end = self.end,
+                        region = self.region,
+                        mpgMu = mpg_mu,
+                        mpgSigma = mpg_sigma
+                        )
+        
+        ev.dataframe.columns = [i for i in range(self.ID_count+1,self.ID_count+num_parkingloc+1)]
+
+        self.ID_count += num_parkingloc
+        self.dataframe = self.dataframe.merge(ev.dataframe,
+                                              how = 'inner',
+                                              left_index=True,
+                                              right_index=True)
+        
+        
+        
+
     ### ----------- SUBSTATION RELATED -------------------------------
         
     def update_dates(self, start, end):
@@ -181,18 +275,36 @@ class Substation:
         mu, sigma = scipy.stats.norm.fit(self.dataframe['AggregatedLoad'].tolist())
         self.mu, self.sigma = round(mu,3), round(sigma,3)
         
+        
     def create_date_cols(self):
         self.dataframe['Year'] = self.dataframe.index.year
         self.dataframe['Month'] = self.dataframe.index.month
-        self.dataframe['Weekday'] = self.dataframe.index.weekday_name
+        self.dataframe['Weekday'] = self.dataframe.index.day_name()
         self.dataframe['Hour'] = self.dataframe.index.hour
+
+
+    def find_max(self):
+        '''
+        Returns date and time of largest
+        hourly consumtion of the substation.
+
+        Returns
+        -------
+        Timestamp. 
+        '''
+        
+        if 'AggregatedLoad' not in self.dataframe.columns:
+            self.update_aggregated_col()
+        return self.dataframe['AggregatedLoad'].idxmax(axis = 0)
+        
+
         
 
     def update_aggregated_col(self):
         '''
-        Function which takes a dataframe where
-        each column represents a load and rows = date/time
-        returns same dataframe but with a aggregated column.
+        Updates the column 'AggregatedLoad' representing
+        the sum of all consumption at that timestamp.
+        
         '''
         self.dataframe.sort_index(inplace=True) # making sure df is sorted
         self.dataframe['AggregatedLoad'] = self.dataframe.loc[:,self.dataframe.columns.isin(range(1,self.ID_count+1))].sum(numeric_only=True, axis=1) # update sum col
@@ -228,6 +340,7 @@ class Substation:
     
 
 
+    
 
     def filter_whole_years(self, jan_start = False, num = 0):
         '''
@@ -280,11 +393,12 @@ class Substation:
         list_len = len(sorted_demand_list) # Number of datapoints
         x = np.linspace(1,list_len,list_len).tolist() # List of hours
 
-        plt.plot(x,sorted_demand_list)
+        
         plt.title('Load Duration curve')
         plt.xlabel('Hours')
         plt.ylabel('Consumption [kWh]') #Review if kwh or not later on
-        plt.show()
+
+        plt.plot(x,sorted_demand_list)
     
 
 
@@ -305,7 +419,7 @@ class Substation:
             
         if duration_curve:
             col_lst = self.dataframe['AggregatedLoad'].sort_values(ascending=False).tolist()
-            self.plot_load_duration_curve(col_lst)
+            return self.plot_load_duration_curve(col_lst)
     
         if month_plot:
            # 'exec(%matplotlib inline)'
@@ -367,8 +481,8 @@ class Substation:
         for ID in ID_list:
             self.flex_count += 1
             self.load_dict[ID].be_flexible(self.coldest_days, reduction)
-            #self.dataframe.loc[:,ID] = self.load_dict[ID].dataframe
-            self.dataframe.loc[self.dataframe.index.isin(self.load_dict[ID].dataframe.index), self.load_dict[ID].dataframe.columns] = self.load_dict[ID].dataframe.loc[self.load_dict[ID].dataframe.index.isin(self.dataframe.index), self.load_dict[ID].dataframe.columns].values
+            self.dataframe.loc[:,ID] = self.load_dict[ID].dataframe
+            #self.dataframe.loc[self.dataframe.index.isin(self.load_dict[ID].dataframe.index), self.load_dict[ID].dataframe.columns] = self.load_dict[ID].dataframe.loc[self.load_dict[ID].dataframe.index.isin(self.dataframe.index), self.load_dict[ID].dataframe.columns].values
 
         
 
