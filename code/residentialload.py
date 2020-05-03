@@ -59,7 +59,7 @@ class HouseNew(ResidentialLoad):
     # Initializer
     def __init__(self, region, ID):
         self.ID = ID
-        self.csv_path = '../data/'+region+'/Loads/new_houses.csv'
+        self.csv_path = '../data/'+region+'/Residential/new_houses.csv'
         self.is_DH = False
         self.is_flex = False
         self.is_new = True
@@ -76,7 +76,7 @@ class HouseOld(ResidentialLoad):
     # Initializer
     def __init__(self, region, ID):
         self.ID = ID
-        self.csv_path = '../data/'+region+'/Loads/old_houses.csv'
+        self.csv_path = '../data/'+region+'/Residential/old_houses.csv'
         self.is_DH = False
         self.is_flex = False
         self.is_new = False
@@ -92,7 +92,7 @@ class HouseDH(ResidentialLoad):
     # Initializer
     def __init__(self, region, ID):
         self.ID = ID
-        self.csv_path = '../data/'+region+'/Loads/mixed_ages_houses_district_heating.csv'
+        self.csv_path = '../data/'+region+'/Residential/mixed_ages_houses_district_heating.csv'
         self.is_DH = True
         self.is_flex = False
         self.is_new = False
@@ -108,7 +108,7 @@ class ApartmentNewDH(ResidentialLoad):
     # Initializer
     def __init__(self, region, ID):
         self.ID = ID
-        self.csv_path = '../data/'+region+'/Loads/new_apartments_district_heating.csv'
+        self.csv_path = '../data/'+region+'/Residential/new_apartments_district_heating.csv'
         self.is_DH = False
         self.is_flex = False
         self.is_new = True
