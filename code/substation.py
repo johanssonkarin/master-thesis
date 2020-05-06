@@ -27,20 +27,24 @@ class Substation:
     
     Attributes
     ----------
-    load_dict: dict
+    resload_dict: dict
         Contains all residential load objects.
         IDs are keys.
-    pv_dict: dict
+    PV_dict: dict
         Contains all PV objects.
         IDs are keys.
     office_dict: dict
         Contains all PV objects.
         IDs are keys.
+    EV_list: list
+        Contains ID of EV charging stations.
+    custom_list: list
+        Contains ID of Custom Loads
     dataframe: pandas DataFrame
         Every object is a column. DateTimeIndex.
     ID_count: int
         Keeps track of IDs.
-    load_count: int
+    resload_count: int
         Number of residential loads.
     house_count: int
         Number of residential houses.
@@ -50,6 +54,8 @@ class Substation:
         Number of offices.
     flex_count:
         Number of flexible agents.
+    custom_count: int
+        Number of custom loads.
     DH_count: int
         Number of loads with district heatning.
     PV_count: int
@@ -78,12 +84,14 @@ class Substation:
     
     # Initializer / Instance Attributes
     def __init__(self, region):
-        self.load_dict = dict()
-        self.pv_dict = dict()
+        self.resload_dict = dict()
+        self.PV_dict = dict()
         self.office_dict = dict()
+        self.EV_list = list()
+        self.custom_list = list() 
         self.dataframe = pd.DataFrame()
         self.ID_count = 0
-        self.load_count = 0
+        self.resload_count = 0
         self.house_count = 0
         self.apartment_count = 0
         self.office_count = 0
@@ -91,6 +99,7 @@ class Substation:
         self.DH_count = 0
         self.PV_count = 0
         self.EV_count = 0
+        self.custom_count = 0
         self.region = region
         self.is_flex = False
         self.is_efficient = False
@@ -110,10 +119,10 @@ class Substation:
             if load_type == 'HouseNew':
                 for i in range(0,num):
                     self.ID_count += 1
-                    self.load_count += 1
+                    self.resload_count += 1
                     self.house_count += 1
                     load = HouseNew(region = self.region, ID = self.ID_count)
-                    self.load_dict[self.ID_count] = load 
+                    self.resload_dict[self.ID_count] = load 
                     
                     if self.dataframe.empty:
                         self.dataframe = load.dataframe
@@ -125,10 +134,10 @@ class Substation:
             elif load_type == 'HouseOld':
                 for i in range(0,num):
                     self.ID_count += 1
-                    self.load_count += 1
+                    self.resload_count += 1
                     self.house_count += 1
                     load = HouseOld(region = self.region, ID = self.ID_count)
-                    self.load_dict[self.ID_count] = load 
+                    self.resload_dict[self.ID_count] = load 
                     
                     if self.dataframe.empty:
                         self.dataframe = load.dataframe
@@ -140,11 +149,11 @@ class Substation:
             elif load_type == 'HouseDH':
                 for i in range(0,num):
                     self.ID_count += 1
-                    self.load_count += 1
+                    self.resload_count += 1
                     self.house_count += 1
                     self.DH_count += 1
                     load = HouseDH(region = self.region, ID = self.ID_count)
-                    self.load_dict[self.ID_count] = load 
+                    self.resload_dict[self.ID_count] = load 
                     
                     if self.dataframe.empty:
                         self.dataframe = load.dataframe
@@ -156,11 +165,11 @@ class Substation:
             elif load_type == 'ApartmentNewDH':
                 for i in range(0,num):
                     self.ID_count += 1
-                    self.load_count += 1
+                    self.resload_count += 1
                     self.apartment_count += 1
                     self.DH_count += 1
                     load = ApartmentNewDH(region = self.region, ID = self.ID_count)
-                    self.load_dict[self.ID_count] = load 
+                    self.resload_dict[self.ID_count] = load 
                     
                     if self.dataframe.empty:
                         self.dataframe = load.dataframe
@@ -173,20 +182,40 @@ class Substation:
             self.update_dates(self.dataframe.index[0],self.dataframe.index[-1])
 
             
-    def add_office(self, num = 1, randomize = True):
+    def add_office(self, size, num = 1, randomize = True):
         '''
-        Stupid function for addinf office like load curves
-        to the substation.By default the offices are randomized
-        by a percentage drawn from a gaussion distribution
-        with mu = 0 and sigma = 0.1.
+        Adding office objects to the substation.
+
+        Parameters
+        ----------
+        size: int
+            800/12402/12667/28246/66799/73620
+            represents atemp, i.e. heated
+            area (m2) of the building. 800 by default.
+            if size doesn't match a data set. A load
+            is approximated using the other datasets.
+        num: int
+            number of offices of that size to add.
+        randomize: bool, optional
+            True by default. Offices are randomized
+            by a percentage drawn from a gaussion distribution
+            with mu = 0 and sigma = 0.1.
+
+        Returns
+        -------
+        None.
+        
         '''
         for i in range(0,num):
             self.ID_count += 1
             self.office_count +=1
 
-            office = Office(start = self.start,
+            office = Office(size = size,
+                            start = self.start,
                             end = self.end,
-                            ID = self.ID_count)
+                            ID = self.ID_count,
+                            region = self.region,
+                            )
 
             # Save office object to dict
             self.office_dict[office.ID] = office
@@ -203,7 +232,7 @@ class Substation:
 
     def add_PV(self, size, num = 1, randomize = True):
         '''
-        Function for adding PV plants to the substation.
+        Method for adding PV plants to the substation.
         By default these are randomized by a percentage drawn
         from a gaussion distribution (mu = 0, sigma = 0.1).
         '''
@@ -221,7 +250,7 @@ class Substation:
                 pv.be_random()
 
             # Save PV object to dict
-            self.pv_dict[pv.ID] = pv
+            self.PV_dict[pv.ID] = pv
             
             # PV production means neagtive consumption. Merge negative values
             pv_df_neg = pv.dataframe
@@ -233,16 +262,21 @@ class Substation:
 
     def add_EV(self, num_EV, num_parkingloc, mpg_mu = 0.2, mpg_sigma = 0.05):
         '''
-        Function for adding EV charging stations.
+        Method for adding EV charging stations.
         
         Parameters
         ----------
-            num_EV: int
-                Number of EVs to charge.
-            num_parkingloc: int
-                Number of locations to charge the EVs.
+        num_EV: int
+            Number of EVs to charge.
+        num_parkingloc: int
+            Number of locations to charge the EVs.
+
+        Returns
+        -------
+        None.
+        
         '''
-        self.EV_count = num_EV
+        self.EV_count += num_EV
         
         ev = EVStations(numberOfEVs = num_EV,
                         numberOfparkingloc = num_parkingloc,
@@ -252,15 +286,56 @@ class Substation:
                         mpgMu = mpg_mu,
                         mpgSigma = mpg_sigma
                         )
-        
+
+        #rename the charging stations according to
+        # their IDs. for compatability :)
         ev.dataframe.columns = [i for i in range(self.ID_count+1,self.ID_count+num_parkingloc+1)]
 
+        # Add IDs to list of EV IDs to keep track
+        self.EV_list += [i for i in range(self.ID_count+1,self.ID_count+num_parkingloc+1)]
         self.ID_count += num_parkingloc
         self.dataframe = self.dataframe.merge(ev.dataframe,
                                               how = 'inner',
                                               left_index=True,
                                               right_index=True)
-        
+
+
+    def add_custom(self, csv_path = None, custom = None): 
+        '''
+        Method for adding loads which are not in
+        any of the datasets of the model by passing a
+        local csv path or a dataframe.
+
+        Parameters
+        ----------
+        csv_path: str, optional
+            Path to a local compatible csv-file.
+        custom: pandas DataFrame, optional
+            Should contain time series of consumption in
+            kWh and have a DateTimeIndex.
+            Could be one or more loads.
+
+        Returns
+        -------
+        None.
+        '''
+
+        if csv_path:
+            self.ID_count += 1
+            # Create dataframe
+            custom = pd.read_csv(csv_path, index_col = 0, parse_dates = True)
+        if custom:
+            # Rename columns (+1 or not?)
+            custom.columns = [range(self.ID_count, self.ID_count+custom.shape[1])]
+            # Add to substation dataframe
+            self.dataframe = self.dataframe.merge(custom, 
+                                              how = 'inner',
+                                              left_index=True,
+                                              right_index=True)
+
+            # Remember IDs and number of loads
+            self.custom_list += [range(self.ID_count, self.ID_count+custom.shape[1])]
+            self.custom_count += custom.shape[1]           
         
         
 
@@ -277,6 +352,15 @@ class Substation:
         
         
     def create_date_cols(self):
+        '''
+        Add information about each index in
+        columns, including year, month, weekday
+        and hour.
+
+        Returns
+        -------
+        None. 
+        '''
         self.dataframe['Year'] = self.dataframe.index.year
         self.dataframe['Month'] = self.dataframe.index.month
         self.dataframe['Weekday'] = self.dataframe.index.day_name()
@@ -286,7 +370,7 @@ class Substation:
     def find_max(self):
         '''
         Returns date and time of largest
-        hourly consumtion of the substation.
+        hourly consumption of the substation.
 
         Returns
         -------
@@ -335,7 +419,7 @@ class Substation:
         if self.mu == None:
             self.calculate_norm()
         return ('Substation based on data from {} to {}.'.format(self.start,self.end)\
-               + ' The substation contains {} loads with an '.format(self.load_count)\
+               + ' The substation contains {} loads with an '.format(self.resload_count)\
                 + 'aggregated average comsumption of {} (-/+ {}) kWh per hour.'.format(self.mu,self.sigma))
     
 
@@ -383,24 +467,128 @@ class Substation:
         self.update_dates(self.dataframe.index[0],self.dataframe.index[-1])
 
 
-        
 
-    def plot_load_duration_curve(self,sorted_demand_list):
+    def get_load_type(self,ID):
         '''
-        Function that takes a sorted list of load demand 
+        Method for retriving class name
+        of a load.
+
+        Parameters
+        ----------
+            ID: int
+                Corresponding to an ID of a
+                load within the substation.
+                
+        Returns
+        -------
+        String
+
+        '''
+        # Check if residential
+        if ID in self.resload_dict.keys():
+            return self.resload_dict[ID].__class__.__name__
+        # Check if Office
+        if ID in self.office_dict.keys():
+            return self.office_dict[ID].__class__.__name__
+        # Check if PV plant
+        if ID in self.PV_dict.keys():
+            return self.PV_dict[ID].__class__.__name__
+        # This may not be correct and needs fixing
+        # and EV charge should come first since
+        # > ID_count doesn't always hold true. 
+        if ID in self.EV_list:
+            return 'EVChargingStation'
+        if ID in self.custom_list:
+            return 'Custom'
+        else:
+            return 'There is no load with {} as ID in the substation.'.format(ID)
+          
+
+
+    def get_loadID(self,
+                   new = False,
+                   old = False,
+                   noDH = False, 
+                   flex = False,
+                   residential = False,
+                   office = False):
+        '''
+        Method that returns ID of loads of the substation
+        based on attribute.
+        '''
+        ID_list = []
+        
+        if noDH:
+            ID_list += [ID for ID,obj in self.resload_dict.items() if not obj.is_DH]
+        if new:
+            ID_list += [ID for ID,obj in self.resload_dict.items() if obj.is_new]
+        if old:
+            ID_list += [ID for ID,obj in self.resload_dict.items() if not obj.is_new]
+        if flex:
+            ID_list += [ID for ID,obj in self.resload_dict.items() if obj.is_flex]
+        if residential:
+            ID_list += [ID for ID,obj in self.resload_dict.items()]
+        if office:
+            ID_list += [ID for ID in self.office_dict.keys()]
+            
+        return ID_list
+    
+    
+    
+    def plot_single_load(self, ID, start = None, end = None):
+        '''
+        Plots the load curve of a single load.
+
+        Parameters
+        ----------
+            ID: int
+                The ID of the load to plot.
+            start: str, optional
+                e.g. '2019-01-01'. if
+                not provided the start date 
+                of the dataframe is used
+            end: str, optional
+                e.g. '2019-01-02'. if
+                not provided the end date
+                of the dataframe is used
+
+        Returns
+        -------
+        Matplotlib object
+        
+        '''
+        # Add resample and freq??
+
+        if not start: #use dataframe start index if no input
+            start = self.start
+        if not end: #use dataframe end index if no input
+            end = self.end
+
+        load_name = self.get_load_type(ID)
+        #cut dataframe to time period of interest
+        data = self.dataframe[start:end]
+        load_plt = plt.plot(data[ID])
+        plt.title('Load curve of type ´{}´ with ID {}'.format(load_name,ID))
+        plt.ylabel('kWh')
+        return load_plt
+
+
+
+    def plot_load_duration_curve(self):
+        '''
+        Method that takes a sorted list of load demand 
         values and produces a plot of the load duration curve.
         '''
+        sorted_demand_list = self.dataframe['AggregatedLoad'].sort_values(ascending=False).tolist()
         list_len = len(sorted_demand_list) # Number of datapoints
         x = np.linspace(1,list_len,list_len).tolist() # List of hours
 
-        
-        plt.title('Load Duration curve')
+        fig = plt.plot(x,sorted_demand_list)
+        plt.title('Load duration curve')
         plt.xlabel('Hours')
-        plt.ylabel('Consumption [kWh]') #Review if kwh or not later on
+        plt.ylabel('kWh')
 
-        plt.plot(x,sorted_demand_list)
-    
-
+        return fig
 
 
     def print_insights(self, 
@@ -418,35 +606,25 @@ class Substation:
             self.create_date_cols()
             
         if duration_curve:
-            col_lst = self.dataframe['AggregatedLoad'].sort_values(ascending=False).tolist()
-            return self.plot_load_duration_curve(col_lst)
+            return self.plot_load_duration_curve()
     
         if month_plot:
-           # 'exec(%matplotlib inline)'
-            reload(plt)
-            'exec(%matplotlib notebook)'
             ax = sns.boxplot(data=self.dataframe, x='Month', y='AggregatedLoad')
             ax.set_ylabel('kWh')
-            ax.set_title('Hourly comsumption of the substation')
+            ax.set_title('Hourly consumption of the substation')
         
         if weekday_plot:
-           # %matplotlib inline
-            reload(plt)
-            'exec(%matplotlib notebook)'
             sns.set(style="whitegrid")
             order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
             ax1 = sns.boxplot(data=self.dataframe, x='Weekday', y='AggregatedLoad', order=order)
             ax1.set_ylabel('kWh')
             ax1.set_xlabel('')
-            ax1.set_title('Hourly comsumption of the substation')
+            ax1.set_title('Hourly consumption of the substation')
             
         if hour_plot:
-           # %matplotlib inline
-            reload(plt)
-            'exec(%matplotlib notebook)'
             ax = sns.boxplot(data=self.dataframe, x='Hour', y='AggregatedLoad')
             ax.set_ylabel('kWh')
-            ax.set_title('Hourly comsumption of the substation')
+            ax.set_title('Hourly consumption of the substation')
 
 
             
@@ -480,8 +658,8 @@ class Substation:
         ID_list = self.remove_list_element(ID_list, percentage = percent_loads)
         for ID in ID_list:
             self.flex_count += 1
-            self.load_dict[ID].be_flexible(self.coldest_days, reduction)
-            self.dataframe.loc[:,ID] = self.load_dict[ID].dataframe
+            self.resload_dict[ID].be_flexible(self.coldest_days, reduction)
+            self.dataframe.loc[:,ID] = self.resload_dict[ID].dataframe
             #self.dataframe.loc[self.dataframe.index.isin(self.load_dict[ID].dataframe.index), self.load_dict[ID].dataframe.columns] = self.load_dict[ID].dataframe.loc[self.load_dict[ID].dataframe.index.isin(self.dataframe.index), self.load_dict[ID].dataframe.columns].values
 
         
@@ -521,29 +699,6 @@ class Substation:
         self.coldest_days = list_of_dates
 
 
-        
-    def get_loadID(self, 
-                   noDH = False, 
-                   flex = False,
-                   residential = False,
-                   office = False):
-        '''
-        Function that returns ID of loads of the substation
-        based on attribute.
-        '''
-        ID_list = []
-        
-        if noDH:
-            ID_list += [ID for ID,obj in self.load_dict.items() if not obj.is_DH]
-        if flex:
-            ID_list += [ID for ID,obj in self.load_dict.items() if obj.is_flex]
-        if residential:
-            ID_list += [ID for ID,obj in self.load_dict.items()]
-        if office:
-            ID_list += [ID for ID in self.office_dict.keys()]
-            
-        return ID_list
-
             
 
     ### ----- EFFICIENCY RELATED ---------------------------------------
@@ -556,8 +711,8 @@ class Substation:
         '''
 
         self.is_efficient = True
-        ID_list = self.get_loadID(residential = True,
-                                  office = True)
+        ID_list = self.get_loadID(residential = True, #Which loads should be effected?
+                                  office = True)        # Now all office + res. Use get_loadID 
         if num:
             ID_list = self.remove_list_element(ID_list, num = num)
 
