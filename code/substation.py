@@ -108,7 +108,7 @@ class Substation:
         self.start = None
         self.end = None
         self.coldest_days = []
-        self.region_path = '../data/'+region+'/min_temp.csv'
+        self.region_path = '../data/'+region+'/temperature.csv'
 
 
 
