@@ -224,10 +224,14 @@ class Substation:
                 office.be_random()
 
             # Add office to substation dataframe
-            self.dataframe = self.dataframe.merge(office.dataframe, 
-                                                  how = 'inner',
-                                                  left_index=True,
-                                                  right_index=True)
+            if self.dataframe.empty:
+                        self.dataframe = office.dataframe
+            else:
+                self.dataframe = self.dataframe.merge(office.dataframe, 
+                                                      how = 'inner',
+                                                      left_index=True,
+                                                      right_index=True)
+            self.update_dates(self.dataframe.index[0],self.dataframe.index[-1])
         
 
     def add_PV(self, size, num = 1, randomize = True):
@@ -255,10 +259,14 @@ class Substation:
             # PV production means neagtive consumption. Merge negative values
             pv_df_neg = pv.dataframe
             pv_df_neg[pv.ID] *= (-1)
-            self.dataframe = self.dataframe.merge(pv_df_neg,
-                                                  how = 'inner',
-                                                  left_index=True,
-                                                  right_index=True)
+            if self.dataframe.empty:
+                self.dataframe = pv_df_neg
+            else:
+                self.dataframe = self.dataframe.merge(pv_df_neg,
+                                                      how = 'inner',
+                                                      left_index=True,
+                                                      right_index=True)
+            self.update_dates(self.dataframe.index[0],self.dataframe.index[-1])
 
     def add_EV(self, num_EV, num_parkingloc, mpg_mu = 0.2, mpg_sigma = 0.05):
         '''
@@ -294,10 +302,14 @@ class Substation:
         # Add IDs to list of EV IDs to keep track
         self.EV_list += [i for i in range(self.ID_count+1,self.ID_count+num_parkingloc+1)]
         self.ID_count += num_parkingloc
-        self.dataframe = self.dataframe.merge(ev.dataframe,
-                                              how = 'inner',
-                                              left_index=True,
-                                              right_index=True)
+        if self.dataframe.empty:
+            self.dataframe = ev.dataframe
+        else:
+            self.dataframe = self.dataframe.merge(ev.dataframe,
+                                                  how = 'inner',
+                                                  left_index=True,
+                                                  right_index=True)
+        self.update_dates(self.dataframe.index[0],self.dataframe.index[-1])
 
 
     def add_custom(self, csv_path = None, custom = None): 
@@ -328,15 +340,19 @@ class Substation:
             # Rename columns (+1 or not?)
             custom.columns = [range(self.ID_count, self.ID_count+custom.shape[1])]
             # Add to substation dataframe
-            self.dataframe = self.dataframe.merge(custom, 
-                                              how = 'inner',
-                                              left_index=True,
-                                              right_index=True)
+            if self.dataframe.empty:
+                self.dataframe = custom
+            else: 
+                self.dataframe = self.dataframe.merge(custom, 
+                                                  how = 'inner',
+                                                  left_index=True,
+                                                  right_index=True)
 
             # Remember IDs and number of loads
             self.custom_list += [range(self.ID_count, self.ID_count+custom.shape[1])]
             self.custom_count += custom.shape[1]           
         
+        self.update_dates(self.dataframe.index[0],self.dataframe.index[-1])
         
 
     ### ----------- SUBSTATION RELATED -------------------------------
@@ -376,6 +392,8 @@ class Substation:
         -------
         Timestamp. 
         '''
+        if self.dataframe.empty: # edge case
+            return 'No max'
         
         if 'AggregatedLoad' not in self.dataframe.columns:
             self.update_aggregated_col()

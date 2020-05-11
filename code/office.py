@@ -169,7 +169,7 @@ class Office:
         mu, sigma = stats.norm.fit(self.dataframe[self.ID].tolist())
         self.mu, self.sigma = round(mu,3), round(sigma,3)
         self.kwhp = self.dataframe[self.ID].max()
-        self.kwhref = self.dataframe[self.ID].sum()/self.size #only works for full year atm
+        self.kwhref = self.dataframe[self.ID].sum()/self.size #give correct numbers for full year atm
 
 
 

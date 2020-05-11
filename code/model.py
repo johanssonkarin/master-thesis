@@ -1,10 +1,11 @@
 import pandas as pd
 import numpy as np
+import datetime
 
 from substation import Substation
 from net import Net
       
-def scenario_substation(region,
+def GUI_substation(region,
                         resload_dict, 
                         office_dict, 
                         PV_69, 
@@ -42,8 +43,12 @@ def scenario_substation(region,
         
     # Add offices
     for size,num in office_dict.items():
-        if size > 0:
-            substation.add_office(size,num)
+        if size > 0 and num > 0:
+            substation.add_office(size= size,num = num)
+
+    if not substation.start:
+        substation.update_dates(start = datetime.datetime(2019, 1, 1),
+                                end = datetime.datetime(2020, 1, 1))
     
     # Add PVs
     if PV_69 > 0:
@@ -74,9 +79,12 @@ def scenario_substation(region,
                                       reduction = flex_reduction, 
                                       only_noDH = flex_only_noDH)
 
-    if custom.empty:
-        substation.add_custom(custom)
-        
-    substation.calculate_norm()
+    if not custom.empty:
+        substation.add_custom(custom = custom)
+
+    if not substation.dataframe.empty:
+        substation.filter_whole_years(jan_start = True, num=1)
+        substation.create_date_cols()
+        substation.calculate_norm()
         
     return substation
