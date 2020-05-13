@@ -804,7 +804,6 @@ class Substation:
         Returns
         --------
         None.
-
         '''
         # Copying the consumption to later replace some 
         # chosen values with optimal values
