@@ -72,9 +72,9 @@ class Office:
                            25,25,25,25,25,25,
                            25,25,25,25,25,25]
 
-            self.dataframe = pd.DataFrame(index = pd.date_range(start=start,
+            self.dataframe = pd.DataFrame(index = pd.date_range(start=self.start,
                                                             freq='H',
-                                                            end=end))
+                                                            end=self.end))
             self.dataframe['Weekday'] = self.dataframe.index.day_name()
             
             for index, row in self.dataframe.iterrows():

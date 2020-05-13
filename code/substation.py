@@ -4,7 +4,7 @@ from EV import EVStations
 from PV import PV
 
 from matplotlib import pyplot as plt
-from importlib import reload
+from scipy import optimize as op
 import seaborn as sns
 import pandas as pd
 import numpy as np
@@ -115,6 +115,22 @@ class Substation:
     ###--------------- ADD LOADS ------------------------------
         
     def add_residential_load(self, load_type, num = 1):
+        '''
+        Method for adding residential builings.
+        
+        Parameters
+        ----------
+        load_type: str
+            Which type to add. Representing a residential
+            load class.
+        num: int
+            Number of loads.
+
+        Returns
+        -------
+        None.
+        
+        '''
         if num > 0:
             if load_type == 'HouseNew':
                 for i in range(0,num):
@@ -440,8 +456,6 @@ class Substation:
                + ' The substation contains {} loads with an '.format(self.resload_count)\
                 + 'aggregated average comsumption of {} (-/+ {}) kWh per hour.'.format(self.mu,self.sigma))
     
-
-
     
 
     def filter_whole_years(self, jan_start = False, num = 0):
@@ -499,7 +513,7 @@ class Substation:
                 
         Returns
         -------
-        String
+        String.
 
         '''
         # Check if residential
@@ -520,8 +534,7 @@ class Substation:
             return 'Custom'
         else:
             return 'There is no load with {} as ID in the substation.'.format(ID)
-          
-
+        
 
     def get_loadID(self,
                    new = False,
@@ -550,7 +563,6 @@ class Substation:
             ID_list += [ID for ID in self.office_dict.keys()]
             
         return ID_list
-    
     
     
     def plot_single_load(self, ID, start = None, end = None):
@@ -615,7 +627,7 @@ class Substation:
                        weekday_plot = True, 
                        hour_plot = True):
         '''
-        Function for generating and printing different kinds of
+        Method for generating and printing different kinds of
         information about the dataframe and load profiles. 
         '''
         
@@ -647,7 +659,7 @@ class Substation:
 
             
 
-    ### ----- FLEX RELATED ---------------------------------------
+    ### ----- 'STATIC' FLEX ---------------------------------------
     
     def introduce_flexibility(self, 
                               days = 17, 
@@ -665,6 +677,9 @@ class Substation:
         is defined in hours.
         '''
         self.is_flex = True
+        if 'AggregatedLoad' not in self.dataframe:
+            self.update_aggregated_col()
+        self.dataframe['NoFlex'] = self.dataframe['AggregatedLoad']
         if not self.coldest_days:
             self.find_coldest_days(days)
         
@@ -679,10 +694,28 @@ class Substation:
             self.resload_dict[ID].be_flexible(self.coldest_days, reduction)
             self.dataframe.loc[:,ID] = self.resload_dict[ID].dataframe
             #self.dataframe.loc[self.dataframe.index.isin(self.load_dict[ID].dataframe.index), self.load_dict[ID].dataframe.columns] = self.load_dict[ID].dataframe.loc[self.load_dict[ID].dataframe.index.isin(self.dataframe.index), self.load_dict[ID].dataframe.columns].values
-
+        self.update_aggregated_col()
         
 
     def remove_list_element(self, thelist, percentage = None, num = None):
+        '''
+        Removing a random number of elements or a percentage
+        of element from a list.
+
+        Parameters
+        ----------
+        thelist: list
+            The list from which elements should be removed.
+        percentage: float, optional
+            [0,1] percentage to remove.
+        num: int, optional
+            Number of elements to remove.
+
+        Returns
+        -------
+        List.
+        
+        '''
         random.shuffle(thelist)
         if percentage:
             count = int(len(thelist) * percentage)
@@ -695,12 +728,21 @@ class Substation:
     
     def find_coldest_days(self, num):
         '''
-        Function for finding the n (default same as number of flexible 
-        days: 17) coldest days per year in a region, which is then updated 
+        Method for finding the coldest days per year in a region, which is then updated 
         in the substation attribute 'coldest_days'. The path to the 
         temperature data needs to be specified within the class
         attribute 'region_path_dict'. The start and end of the timeframe to
-        check is determined by the start and end attributes of the object. 
+        check is determined by the start and end attributes of the object.
+
+        Parameters
+        ----------
+        num: int
+            The number of coldest days/year to find.
+
+        Returns
+        -------
+        None.
+        
         '''
         temp_data = pd.read_csv(self.region_path, index_col = 0, parse_dates = True)
 
@@ -719,7 +761,7 @@ class Substation:
 
             
 
-    ### ----- EFFICIENCY RELATED ---------------------------------------
+    ### ----- EFFICIENCY  ----------------------------------------------
 
     def introduce_efficiency(self, num = None, percent = 0.3):
         '''
@@ -738,7 +780,65 @@ class Substation:
         
 
 
-
-
-
+    ### ----- OPTIMAL FLEX --------------------------------------------------
     
+    def introduce_optimal_flex(self, maxkW, maxkwWh, optimize_months = [10,11,12,1,2,3]):
+        '''
+        Method for including a additional column of optimized
+        aggregated load, given some contraints. Currently
+        addressing substation level and a time window of
+        24 hours / a day.
+
+        Parameters
+        ----------
+        maxkW: float
+            How much of the load that could be reduced during
+            one hour, i.e. reduction of one value. 
+        maxkWh: float
+            Total reduction of energy during the specified
+            time frame.
+        optimize_months: list of ints, optional
+            Which months to optimize, summer/winter
+            is the current optimization criteria. 
+            
+        Returns
+        --------
+        None.
+
+        '''
+        # Copying the consumption to later replace some 
+        # chosen values with optimal values
+        self.dataframe['OptimalLoad'] = self.dataframe['AggregatedLoad']
+
+        # Optimizing per day
+        index_days = pd.date_range(start = self.dataframe.index[0],
+                                   end = self.dataframe.index[-1],
+                                   freq = 'D')
+
+        # Optimize all days during winter months
+        for index in index_days:
+            if index.month in optimize_months:
+                consumption = self.dataframe[str(index).split(' ',1)[0]]['AggregatedLoad'].tolist()
+                self.dataframe.loc[str(index).split(' ',1)[0],'OptimalLoad'] = self.optimize_consumption(consumption,
+                                                                                                         maxkW,
+                                                                                                         maxkwWh)
+
+    def optimize_consumption(self, actual_consumption, maxkW, maxkWh):
+        # inequalities in the form f(x) >= 0
+        constraints = ({'type': 'ineq','fun': lambda x: maxkW - abs(max(x))}, # max recover / flex limited by maxMW
+                        {'type': 'ineq','fun': lambda x: maxkWh - sum(abs(x[x<0]))}, #max flex energy limited by maxMWh
+                        {'type': 'ineq','fun': lambda x: -sum(x)}, # total response cannot be positive, i.e. customer cannot consume more than baseline
+                        #{'type': 'ineq','fun': lambda x: np.ones(self.slack)*flex_left_to_recover - np.dot(np.tril(np.ones((self.slack,self.slack))),x)},
+                        #{'type':'ineq','fun':lambda x: 0 - abs(sum(x)))}
+                        )
+        # daily time window --> 24 values    
+        x0 = np.zeros(24) 
+        # minimize max given the above contraints
+        results = op.minimize(lambda x: self.flex_function(actual_consumption,x), x0, constraints = constraints)
+        #return the optimized results
+        return [sum(x) for x in zip(actual_consumption, results.x)] 
+        
+        # subfunction to optimize
+    def flex_function(self, actual_consumption, x):
+        return max(actual_consumption + x)
+        

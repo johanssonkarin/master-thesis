@@ -11,7 +11,7 @@ class PV:
     Attributes
     -----------
         size: 
-            an int: 69/400/868 and represents m2
+            an int: 69/400/868 or custom. Represents m2
             of the panels.
         reigon:
             string of region e.g. 'Stockholm'
@@ -27,6 +27,7 @@ class PV:
     def __init__(self, region, size, start, end, ID):
         self.size = size
         self.ID = ID
+        self.customsize = False
         self.start = start
         self.end = end
         self.mu = None
@@ -42,7 +43,11 @@ class PV:
 
     def populate_dataframe(self):
         # Load the PV data as is
-        csv_path = self.path_dict[self.size]
+        if self.size in self.path_dict.keys():
+            csv_path = self.path_dict[self.size]
+        else:
+            self.customsize = True
+            csv_path = self.path_dict[69]
         pv_data = pd.read_csv(csv_path)
         pv_data.columns = [self.ID]
         ind = pd.date_range(start = self.start, periods = pv_data.shape[0], freq = 'H')
@@ -59,6 +64,9 @@ class PV:
         # Set missing values to 0 and convert to kWh
         self.dataframe.fillna(0, inplace = True)
         self.dataframe[self.ID] /= 1000
+
+        if self.customsize:
+            self.dataframe[self.ID] = self.dataframe[self.ID].apply(lambda x: (x/10.5) * self.size)
         
     
     def calculate_norm(self):
