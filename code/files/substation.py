@@ -194,7 +194,6 @@ class Substation:
                                                               how = 'inner',
                                                               left_index=True,
                                                               right_index=True)
-                        
             self.update_dates(self.dataframe.index[0],self.dataframe.index[-1])
 
             
@@ -222,31 +221,32 @@ class Substation:
         None.
         
         '''
-        for i in range(0,num):
-            self.ID_count += 1
-            self.office_count +=1
+        if num>0:
+            for i in range(0,num):
+                self.ID_count += 1
+                self.office_count +=1
 
-            office = Office(size = size,
-                            start = self.start,
-                            end = self.end,
-                            ID = self.ID_count,
-                            region = self.region,
-                            )
+                office = Office(size = size,
+                                start = self.start,
+                                end = self.end,
+                                ID = self.ID_count,
+                                region = self.region,
+                                )
 
-            # Save office object to dict
-            self.office_dict[office.ID] = office
-            
-            if randomize:
-                office.be_random()
+                # Save office object to dict
+                self.office_dict[office.ID] = office
+                
+                if randomize:
+                    office.be_random()
 
-            # Add office to substation dataframe
-            if self.dataframe.empty:
-                        self.dataframe = office.dataframe
-            else:
-                self.dataframe = self.dataframe.merge(office.dataframe, 
-                                                      how = 'inner',
-                                                      left_index=True,
-                                                      right_index=True)
+                # Add office to substation dataframe
+                if self.dataframe.empty:
+                            self.dataframe = office.dataframe
+                else:
+                    self.dataframe = self.dataframe.merge(office.dataframe, 
+                                                          how = 'inner',
+                                                          left_index=True,
+                                                          right_index=True)
             self.update_dates(self.dataframe.index[0],self.dataframe.index[-1])
         
 
@@ -256,32 +256,33 @@ class Substation:
         By default these are randomized by a percentage drawn
         from a gaussion distribution (mu = 0, sigma = 0.1).
         '''
-        for i in range(0,num):
-            self.ID_count += 1
-            self.PV_count += 1
-            
-            pv = PV(size = size,
-                    region = self.region,
-                    start = str(self.start).split(' ',1)[0],
-                    end = str(self.end).split(' ',1)[0],
-                    ID = self.ID_count)
-            
-            if randomize:
-                pv.be_random()
+        if num > 0:
+            for i in range(0,num):
+                self.ID_count += 1
+                self.PV_count += 1
+                
+                pv = PV(size = size,
+                        region = self.region,
+                        start = str(self.start).split(' ',1)[0],
+                        end = str(self.end).split(' ',1)[0],
+                        ID = self.ID_count)
+                
+                if randomize:
+                    pv.be_random()
 
-            # Save PV object to dict
-            self.PV_dict[pv.ID] = pv
-            
-            # PV production means neagtive consumption. Merge negative values
-            pv_df_neg = pv.dataframe
-            pv_df_neg[pv.ID] *= (-1)
-            if self.dataframe.empty:
-                self.dataframe = pv_df_neg
-            else:
-                self.dataframe = self.dataframe.merge(pv_df_neg,
-                                                      how = 'inner',
-                                                      left_index=True,
-                                                      right_index=True)
+                # Save PV object to dict
+                self.PV_dict[pv.ID] = pv
+                
+                # PV production means neagtive consumption. Merge negative values
+                pv_df_neg = pv.dataframe
+                pv_df_neg[pv.ID] *= (-1)
+                if self.dataframe.empty:
+                    self.dataframe = pv_df_neg
+                else:
+                    self.dataframe = self.dataframe.merge(pv_df_neg,
+                                                          how = 'inner',
+                                                          left_index=True,
+                                                          right_index=True)
             self.update_dates(self.dataframe.index[0],self.dataframe.index[-1])
 
     def add_EV(self, num_EV, num_parkingloc, mpg_mu = 0.2, mpg_sigma = 0.05):
@@ -458,20 +459,21 @@ class Substation:
     
     
 
-    def filter_whole_years(self, jan_start = False, num = 0):
+    def filter_whole_years(self, jan_start = True, num = None):
         '''
-        Function cutting dataframe to whole years.
+        Method for limiting substation dataframe to whole years.
         By default jan-dec but can be changed to whole
         years from first date index. The 'num'
         parameter specifies number of years to keep
         and needs to minimum 1. If num is not specified,
         maximum number of years are kept. 
         '''
-        first_date, last_date = self.start, self.end
+        #first_date, last_date = self.start, self.end
+        first_date, last_date = self.dataframe.index[0], self.dataframe.index[-1]
 
-        if num >= 1:
+        if num:
             if jan_start:
-                if first_date.month in [1] and first_date.day in [1]:
+                if first_date.is_year_start:
                     start_date = str(first_date.year) +'-01-01'
                     end_date = str(first_date.year+num-1) +'-12-31'
                 else:
@@ -483,7 +485,7 @@ class Substation:
                 
         else:
             if jan_start:
-                if first_date.month in [1] and first_date.day in [1]:
+                if first_date.is_year_start:
                     start_date = str(first_date.year) +'-01-01'
                     end_date = str(last_date.year-1) +'-12-31'
                 else:

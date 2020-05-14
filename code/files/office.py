@@ -96,8 +96,8 @@ class Office:
             self.dataframe.columns = [self.ID]
             
             #update start and end dates of the object according to data
-            self.start = str(self.dataframe.index[0]).split(' ',1)[0]
-            self.end = str(self.dataframe.index[0]).split(' ',1)[0]
+            self.start = self.dataframe.index[0]
+            self.end = self.dataframe.index[-1]
         elif self.size in [12667,28246,66799,73620]: #sizes in dataset
             self.dataframe = pd.read_csv('../data/'+self.region+'/Office/office_'+str(self.size)+'.csv',
                                           index_col = 0,
@@ -105,8 +105,8 @@ class Office:
             self.dataframe.columns = [self.ID]
 
             #update start and end dates of the object according to data
-            self.start = str(self.dataframe.index[0]).split(' ',1)[0]
-            self.end = str(self.dataframe.index[0]).split(' ',1)[0]
+            self.start = self.dataframe.index[0]
+            self.end = self.dataframe.index[-1]
         else:
             #73620 most suitable for generalization
             self.dataframe = pd.read_csv('../data/'+self.region+'/Office/office_73620.csv',
@@ -116,8 +116,8 @@ class Office:
             self.dataframe[self.ID] = self.dataframe[self.ID].apply(lambda x: x/73260 * self.size)
             
             #update start and end dates of the object according to data
-            self.start = str(self.dataframe.index[0]).split(' ',1)[0]
-            self.end = str(self.dataframe.index[0]).split(' ',1)[0]
+            self.start = self.dataframe.index[0]
+            self.end = self.dataframe.index[-1]
 
 
     def description(self):

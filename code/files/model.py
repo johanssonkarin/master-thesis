@@ -40,7 +40,8 @@ def GUI_substation(region,
     
     # Add residential loads to susbstation
     for load,num in resload_dict.items():
-        substation.add_residential_load(load,num)
+        if num >0:
+            substation.add_residential_load(load,num)
         
     # Add offices
     for size,num in office_dict.items():
@@ -49,7 +50,7 @@ def GUI_substation(region,
 
     if not substation.start:
         substation.update_dates(start = datetime.datetime(2019, 1, 1),
-                                end = datetime.datetime(2020, 1, 1))
+                                end = datetime.datetime(2019, 12, 31))
     
     # Add PVs
     for size,num in pv_dict.items():
