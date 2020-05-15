@@ -197,7 +197,7 @@ class Substation:
             self.update_dates(self.dataframe.index[0],self.dataframe.index[-1])
 
             
-    def add_office(self, size, num = 1, randomize = True):
+    def add_office(self, size, num = 1, randomize = True, is_DH = True):
         '''
         Adding office objects to the substation.
 
@@ -215,6 +215,9 @@ class Substation:
             True by default. Offices are randomized
             by a percentage drawn from a gaussion distribution
             with mu = 0 and sigma = 0.1.
+        is_DH: bool, optional
+            If the office is district heated or not. Effects
+            the DH_count of the substation.
 
         Returns
         -------
@@ -225,6 +228,8 @@ class Substation:
             for i in range(0,num):
                 self.ID_count += 1
                 self.office_count +=1
+                if is_DH:
+                    self.DH_count +=1
 
                 office = Office(size = size,
                                 start = self.start,
@@ -253,8 +258,21 @@ class Substation:
     def add_PV(self, size, num = 1, randomize = True):
         '''
         Method for adding PV plants to the substation.
-        By default these are randomized by a percentage drawn
-        from a gaussion distribution (mu = 0, sigma = 0.1).
+
+        Parameters
+        -----------
+        size: int
+            Refers to installed m2 of the PV.
+        num: int
+            Number of PV plants to add of the specified size.
+        randomize: bool, optional
+            If the production profile should be randomized by
+            a percentage drawn from a gaussion distribution
+            (mu = 0, sigma = 0.1).
+
+        Returns
+        -------
+        None.
         '''
         if num > 0:
             for i in range(0,num):

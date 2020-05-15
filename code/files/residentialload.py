@@ -59,7 +59,7 @@ class HouseNew(ResidentialLoad):
     # Initializer
     def __init__(self, region, ID):
         self.ID = ID
-        self.csv_path = '../data/'+region+'/Residential/new_houses.csv'
+        self.csv_path = '../../data/'+region+'/Residential/new_houses.csv'
         self.is_DH = False
         self.is_flex = False
         self.is_new = True
