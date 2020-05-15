@@ -74,6 +74,9 @@ class Substation:
     sigma: float
         Standard deviation of hourly cosumption of
         the substation.
+    percentile_dict: dict
+        A dictionary of percentiles and associated
+        values of the aggregated load.
     start: str
         Start date of the time series data.
     end: 
@@ -105,6 +108,7 @@ class Substation:
         self.is_efficient = False
         self.mu = None
         self.sigma = None
+        self.percentile_dict = None
         self.start = None
         self.end = None
         self.coldest_days = []
@@ -396,8 +400,12 @@ class Substation:
         self.start = start
         self.end = end
         
-    def calculate_norm(self):
+    def calculate_norm(self, percentiles = [1, 25, 50, 75, 90, 99] ):
         self.update_aggregated_col()
+        
+        values = np.percentile(self.dataframe['AggregatedLoad'], q=percentiles)
+        self.percentile_dict = dict(zip(percentiles, values))
+        
         mu, sigma = scipy.stats.norm.fit(self.dataframe['AggregatedLoad'].tolist())
         self.mu, self.sigma = round(mu,3), round(sigma,3)
         
