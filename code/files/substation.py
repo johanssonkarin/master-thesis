@@ -835,6 +835,7 @@ class Substation:
         '''
         # Copying the consumption to later replace some 
         # chosen values with optimal values
+        self.update_aggregated_col()
         self.dataframe['OptimalLoad'] = self.dataframe['AggregatedLoad']
 
         # Optimizing per day
@@ -859,7 +860,7 @@ class Substation:
                         #{'type':'ineq','fun':lambda x: 0 - abs(sum(x)))}
                         )
         # daily time window --> 24 values    
-        x0 = np.zeros(24) 
+        x0 = np.zeros(len(actual_consumption)) 
         # minimize max given the above contraints
         results = op.minimize(lambda x: self.flex_function(actual_consumption,x), x0, constraints = constraints)
         #return the optimized results

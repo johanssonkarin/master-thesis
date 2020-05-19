@@ -57,21 +57,18 @@ def GUI_substation(region,
         if size > 0 and num > 0:
             substation.add_PV(size = size,
                               num = num)
-        
-    
-    # Add EVs
-    if num_EV > 0:
-        substation.add_EV(num_EV, num_parkingloc, mpg_mu)
 
     # Add custom loads from csv
     if not custom.empty:
         substation.add_custom(custom = custom)
 
-    
+
     if not substation.dataframe.empty:
         substation.filter_whole_years(jan_start = True, num=1)
-        substation.create_date_cols()
-        substation.calculate_norm()
+
+    # Add EVs after limiting to 1 year for computational reasons
+    if num_EV > 0:
+        substation.add_EV(num_EV, num_parkingloc, mpg_mu)
 
     # Introduce EE
     if is_efficient:
@@ -80,7 +77,10 @@ def GUI_substation(region,
     # Introduce Optimal Flex
     if optimal_flex:
         substation.introduce_optimal_flex(maxkW, maxkWh)
-        
+
+    if not substation.dataframe.empty:
+        substation.create_date_cols()
+        substation.calculate_norm()
     
     # Introduce Flex
     if is_flex:
