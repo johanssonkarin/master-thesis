@@ -42,6 +42,16 @@ class EVStations:
         self.dataframe = self.create_EV_data()
 
     def create_EV_data(self):
+        '''
+        Auxillary method for generating the object.
+        Creates the EV charging data, which populates
+        the dataframe attribute.
+
+        Returns
+        -------
+        Pandas DataFrame.
+        
+        '''
         numberOfEVs = self.numberOfEVs
         numberOfparkingloc = self.numberOfparkingloc
         start = self.start

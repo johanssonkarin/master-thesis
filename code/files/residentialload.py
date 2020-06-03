@@ -10,6 +10,28 @@ import scipy
 import math
 
 class ResidentialLoad:
+    '''
+    Class representing residential loads.
+
+    Attributes
+    -----------
+    ID: int
+        Should be unique.
+    csv_path: str
+        Indicates where the consumption data is
+        drawn from.
+    is_DH: bool
+        If the heating source of the
+        load is District Heating or not.
+    is_flex: bool
+        If the load implements static flex
+        or not.
+    is_new: bool
+        If the load is a new or old building.
+        If not known, it is labeled old, i.e.
+        False.
+    
+    '''
     
     # Initializer
     def __init__(self):
@@ -21,9 +43,38 @@ class ResidentialLoad:
         self.is_new = False
     
     def description(self):
+        '''
+        Method generating a minimal description of
+        the residential load objects.
+
+        Returns
+        -------
+        String.
+
+        '''
         return ('Residential Load of type {} with ID {}.'.format(self.__class__.__name__, self.ID))
     
     def be_flexible(self, date_list, reduction, move_both = True):
+        '''
+        Method which changes the consumption values within
+        the dataframe attribute according to the static flex
+        implementation.
+
+        Parameters
+        ----------
+        date_list: list
+            A list of the dates to reduce consumption.
+        reduction: float
+            Indicates a percentage to be reduced from the values.
+        move_both: bool, optional
+            If the reduced consumption should be move both
+            forward or backwards or if just forward.
+
+        Returns
+        -------
+        None.
+        
+        '''
         self.is_flex = True
         self.flexSlack = random.randint(5,7) #hours to freeze recovery, 5-7
         self.flexRecover = random.randint(2,5) #hours to recover consumption, 2-4
@@ -32,7 +83,32 @@ class ResidentialLoad:
 
 
         
-    def flex(self, index, date_list, reduction, move_both, hour_list = [17,18,19]): #implement moving comsumption to both before and after
+    def flex(self, index, date_list, reduction, move_both, hour_list = [17,18,19]):
+        '''
+        Auxillary method for the be_flexible method. THe actual reduction and
+        redistribution happen within this method.
+
+        Parameters
+        ----------
+        index: datetimeindex
+            All indices of the dataframe.
+        date_list: list
+            The list of dates to reduce.
+        reduction: float
+            The consumption reduction.
+        move_both: bool
+            How to redistribute the consumption.
+            Only forward or forward and backwards.
+        hour_list: list, optional
+            Whcich hours to reduce consumption.
+            By default the peak hours. 
+        
+
+        Returns
+        -------
+        None.
+
+        '''
         if index.normalize() in date_list and index.hour in hour_list:
             reduce = reduction * self.dataframe.loc[index].values #from percent to value
             self.dataframe.loc[index] -= reduce #reduce from peak
@@ -56,7 +132,7 @@ class ResidentialLoad:
             
     
 class HouseNew(ResidentialLoad):
-    # Initializer
+    # Initializer subclass
     def __init__(self, region, ID):
         self.ID = ID
         self.csv_path = '../data/'+region+'/Residential/new_houses.csv'
@@ -73,7 +149,7 @@ class HouseNew(ResidentialLoad):
         # self.__class__.__name__ + str(self.ID)
         
 class HouseOld(ResidentialLoad):
-    # Initializer
+    # Initializer subclass
     def __init__(self, region, ID):
         self.ID = ID
         self.csv_path = '../data/'+region+'/Residential/old_houses.csv'
@@ -89,7 +165,7 @@ class HouseOld(ResidentialLoad):
 
         
 class HouseDH(ResidentialLoad):
-    # Initializer
+    # Initializer subclass
     def __init__(self, region, ID):
         self.ID = ID
         self.csv_path = '../data/'+region+'/Residential/mixed_ages_houses_district_heating.csv'
@@ -105,7 +181,7 @@ class HouseDH(ResidentialLoad):
         
         
 class ApartmentNewDH(ResidentialLoad):
-    # Initializer
+    # Initializer subclass
     def __init__(self, region, ID):
         self.ID = ID
         self.csv_path = '../data/'+region+'/Residential/new_apartments_district_heating.csv'

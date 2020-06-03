@@ -3,7 +3,7 @@ import numpy as np
 import datetime
 
 from substation import Substation
-from net import Net
+from grid import Grid
       
 def GUI_substation(region,
                    resload_dict,
@@ -23,7 +23,8 @@ def GUI_substation(region,
                    custom,
                    optimal_flex,
                    maxkW,
-                   maxkWh):
+                   maxkWh,
+                   battery):
 
     '''
     Function for creating a substation
@@ -76,7 +77,7 @@ def GUI_substation(region,
                                         num = efficient_loads)
     # Introduce Optimal Flex
     if optimal_flex:
-        substation.introduce_optimal_flex(maxkW, maxkWh)
+        substation.introduce_optimal_flex(maxkW, maxkWh, battery = battery)
 
     if not substation.dataframe.empty:
         substation.create_date_cols()

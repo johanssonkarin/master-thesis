@@ -13,9 +13,9 @@ import random
 import scipy
 import math
 
-class Net:
+class Grid:
     '''
-    Net class.
+    Grid class.
     This class represents a power grid.
 
     Attributes
@@ -56,7 +56,7 @@ class Net:
 
 
     def del_station(self, key):
-        '''Deletes a substation from the net using ID.'''
+        '''Deletes a substation from the grid using ID.'''
         self.station_count -= 1
         del self.station_dict[key]
         self.dataframe.drop(columns = key,
@@ -65,7 +65,7 @@ class Net:
         
 
     def description(self):
-        '''Returns minimal description of the station.'''
+        '''Returns minimal description of the grid.'''
         if self.station_count == 0:
             return 'An empty power grid.'
         if self.station_count == 1:
@@ -74,6 +74,7 @@ class Net:
 
 
     def calculate_norm(self):
+        '''Calculates mean and standard deviation.'''
         self.update_aggregated_col()
         mu, sigma = scipy.stats.norm.fit(self.dataframe['AggregatedLoad'].tolist())
         self.mu, self.sigma = round(mu,3), round(sigma,3)
@@ -81,6 +82,7 @@ class Net:
         
 
     def create_date_cols(self):
+        ''' Auxillary method to create extra datetime info columns.'''
         self.dataframe['Year'] = self.dataframe.index.year
         self.dataframe['Month'] = self.dataframe.index.month
         self.dataframe['Weekday'] = self.dataframe.index.weekday_name
@@ -91,7 +93,7 @@ class Net:
     def find_max(self):
         '''
         To find the maximal hourly consumtion
-        of the net object.
+        of the grid object.
 
         Returns
         -------

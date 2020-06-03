@@ -397,16 +397,48 @@ class Substation:
     ### ----------- SUBSTATION RELATED -------------------------------
         
     def update_dates(self, start, end):
+        '''
+        Updates information about start and
+        end dates of the dataframe, thus by extension
+        the simulations and calcultions, within the
+        attributes of the substation object.
+
+        Returns
+        -------
+        None.
+        '''
         self.start = start
         self.end = end
         
     def calculate_norm(self, percentiles = [1, 25, 50, 75, 90, 99] ):
+        '''
+        Method which calculates information about mean,
+        standard deviation and percentiles of the 'AggregatedLoad'
+        of the dataframe. If dynamic/optimal flexibility has been
+        introduced the values are instead calculated based on
+        'OptimalLoad' of the dataframe. The new values are then
+        updated within the attributes of the substation object.
+
+        Parameters
+        ----------
+        percentiles: list, optional
+            Specifies the percentiles to be calculated.
+
+        Returns
+        -------
+        None.
+        '''
         self.update_aggregated_col()
-        
-        values = np.percentile(self.dataframe['AggregatedLoad'], q=percentiles)
+
+        if 'OptimalLoad' in self.dataframe:
+            mu, sigma = scipy.stats.norm.fit(self.dataframe['OptimalLoad'].tolist())
+            values = np.percentile(self.dataframe['OptimalLoad'], q=percentiles)
+
+        else: 
+            values = np.percentile(self.dataframe['AggregatedLoad'], q=percentiles)
+            mu, sigma = scipy.stats.norm.fit(self.dataframe['AggregatedLoad'].tolist())
+            
         self.percentile_dict = dict(zip(percentiles, values))
-        
-        mu, sigma = scipy.stats.norm.fit(self.dataframe['AggregatedLoad'].tolist())
         self.mu, self.sigma = round(mu,3), round(sigma,3)
         
         
@@ -447,8 +479,13 @@ class Substation:
 
     def update_aggregated_col(self):
         '''
-        Updates the column 'AggregatedLoad' representing
-        the sum of all consumption at that timestamp.
+        Method which updates the 'AggregatedLoad' column, representing
+        the sum of all loads' consumption at that time, in the
+        dataframe attribute of the substation object.
+
+        Returns
+        -------
+        None.
         
         '''
         self.dataframe.sort_index(inplace=True) # making sure df is sorted
@@ -458,10 +495,26 @@ class Substation:
 
     def copy_load_stochastic(self, column_name, sigma=0.1, inplace = False):
         '''
-        A function to copy a load profile with stochastic deviation
-        from the original. The values varies according to a gaussian 
-        distribution, with default and mu = 0, sigma = 0.1. The
-        funtion returns a copy of the dataframe with the new column.
+        Method to stochasticly copy load profile (column)
+        which is then added or updated in the dataframe
+        attribute.
+
+        Parameters
+        ----------
+        column_name: int
+            Indicates which column to copy.
+        sigma: float, optional
+            Stochastic deviation from the original value.
+            A standard deviation of the gaussian distribution
+            which is by default 0.1.
+        inplace: bool, optional
+            If the copy should replace the original or
+            create a new column. 
+
+        Returns
+        -------
+        None.
+        
         '''
         min_prob, max_prob = -sigma, sigma
         prob_array = (max_prob - min_prob) * np.random.random_sample(size=self.dataframe.shape[0]) + min_prob
@@ -476,7 +529,15 @@ class Substation:
 
         
     def description(self):
-        '''Returns a description of the substation object.'''
+        '''
+        Method generating a minimal description of
+        the substation object.
+
+        Returns
+        -------
+        String.
+        
+        '''
         if self.mu == None:
             self.calculate_norm()
         return ('Substation based on data from {} to {}.'.format(self.start,self.end)\
@@ -488,11 +549,23 @@ class Substation:
     def filter_whole_years(self, jan_start = True, num = None):
         '''
         Method for limiting substation dataframe to whole years.
-        By default jan-dec but can be changed to whole
-        years from first date index. The 'num'
-        parameter specifies number of years to keep
-        and needs to minimum 1. If num is not specified,
-        maximum number of years are kept. 
+
+        Parameters
+        ----------
+        jan_start: bool, optional
+            If the year should start by january or
+            the current first date (if it is not the same thing).
+            By default jan-dec but can be changed to whole
+            years from first date index.
+        num: int, optional
+            Specifies number of years to keep
+            and needs to minimum 1. If num is not specified,
+            the maximum number of years are kept.
+
+        Returns
+        -------
+        None.
+        
         '''
         #first_date, last_date = self.start, self.end
         first_date, last_date = self.dataframe.index[0], self.dataframe.index[-1]
@@ -573,7 +646,13 @@ class Substation:
                    office = False):
         '''
         Method that returns ID of loads of the substation
-        based on attribute.
+        based on attribute. The parameters indicate which
+        type of load IDs to return
+
+        Returns
+        -------
+        list.
+        
         '''
         ID_list = []
         
@@ -634,8 +713,13 @@ class Substation:
 
     def plot_load_duration_curve(self):
         '''
-        Method that takes a sorted list of load demand 
+        Method that takes a the AggregatedLoad
         values and produces a plot of the load duration curve.
+
+        Returns
+        -------
+        Matplotlib object
+        
         '''
         sorted_demand_list = self.dataframe['AggregatedLoad'].sort_values(ascending=False).tolist()
         list_len = len(sorted_demand_list) # Number of datapoints
@@ -656,7 +740,12 @@ class Substation:
                        hour_plot = True):
         '''
         Method for generating and printing different kinds of
-        information about the dataframe and load profiles. 
+        information about the dataframe and load profiles.
+        Parameters indicate which graphs to plot. 
+
+        Returns
+        -------
+        Matplotlib object
         '''
         
         self.update_aggregated_col()
@@ -793,9 +882,22 @@ class Substation:
 
     def introduce_efficiency(self, num = None, percent = 0.3):
         '''
-        Simulating the efficiency trend. percent is the percentage
-        of comsumption to reduce. And num is the number of loads to reduce.
-        Percent indicates the reduction of consumption, 0.3 by default.
+        Method simulating the efficiency trend in the dataframe
+        attribute.
+
+        Parameters
+        -----------
+        num: int, optional
+            Specifies the number of loads to reduce, by default all
+            loads are reduced.
+        percent: float, optional
+            Indicates the percentage of comsumption to reduce,
+            0.3 by default.
+
+        Returns
+        -------
+        None.
+        
         '''
 
         self.is_efficient = True
@@ -810,7 +912,11 @@ class Substation:
 
     ### ----- OPTIMAL FLEX --------------------------------------------------
     
-    def introduce_optimal_flex(self, maxkW, maxkwWh, optimize_months = [10,11,12,1,2,3]):
+    def introduce_optimal_flex(self,
+                               maxkW,
+                               maxkWh,
+                               optimize_months = [i for i in range(1,13)], #1-12 default
+                               battery = True):
         '''
         Method for including a additional column of optimized
         aggregated load, given some contraints. Currently
@@ -826,8 +932,12 @@ class Substation:
             Total reduction of energy during the specified
             time frame.
         optimize_months: list of ints, optional
-            Which months to optimize, summer/winter
-            is the current optimization criteria. 
+            Which months to optimize, all year
+            is default. 
+        battery: bool, optional
+            If the flex, in terms of capacity (kW,kWh),
+            should be adapted to battery or flexible agents.
+            
             
         Returns
         --------
@@ -843,19 +953,33 @@ class Substation:
                                    end = self.dataframe.index[-1],
                                    freq = 'D')
 
-        # Optimize all days during winter months
-        for index in index_days:
-            if index.month in optimize_months:
-                consumption = self.dataframe[str(index).split(' ',1)[0]]['AggregatedLoad'].tolist()
-                self.dataframe.loc[str(index).split(' ',1)[0],'OptimalLoad'] = self.optimize_consumption(consumption,
-                                                                                                         maxkW,
-                                                                                                         maxkwWh)
+        if not battery:
+            kWpercent = maxkW
+            kWhpercent = maxkWh
+
+            for index in index_days:
+                if index.month in optimize_months:
+                    consumption = self.dataframe[str(index).split(' ',1)[0]]['AggregatedLoad'].tolist()
+                    maxkW = max(consumption)* kWpercent #percentage of dayily hourly max
+                    maxkWh = sum(consumption) * kWhpercent #percentage of daily max
+                    self.dataframe.loc[str(index).split(' ',1)[0],'OptimalLoad'] = self.optimize_consumption(consumption,
+                                                                                                             maxkW,
+                                                                                                             maxkWh)
+
+        else:
+            for index in index_days:
+                if index.month in optimize_months:
+                    consumption = self.dataframe[str(index).split(' ',1)[0]]['AggregatedLoad'].tolist()
+                    self.dataframe.loc[str(index).split(' ',1)[0],'OptimalLoad'] = self.optimize_consumption(consumption,
+                                                                                                             maxkW,
+                                                                                                             maxkWh)
 
     def optimize_consumption(self, actual_consumption, maxkW, maxkWh):
+        '''Auxillary function to the introduce_optimal_flex method.'''
         # inequalities in the form f(x) >= 0
         constraints = ({'type': 'ineq','fun': lambda x: maxkW - abs(max(x))}, # max recover / flex limited by maxMW
                         {'type': 'ineq','fun': lambda x: maxkWh - sum(abs(x[x<0]))}, #max flex energy limited by maxMWh
-                        {'type': 'ineq','fun': lambda x: -sum(x)}, # total response cannot be positive, i.e. customer cannot consume more than baseline
+                        {'type': 'ineq','fun': lambda x: sum(x)}, # total response cannot be positive, i.e. customer cannot consume more than baseline
                         #{'type': 'ineq','fun': lambda x: np.ones(self.slack)*flex_left_to_recover - np.dot(np.tril(np.ones((self.slack,self.slack))),x)},
                         #{'type':'ineq','fun':lambda x: 0 - abs(sum(x)))}
                         )
@@ -868,5 +992,7 @@ class Substation:
         
         # subfunction to optimize
     def flex_function(self, actual_consumption, x):
+        '''Auxillary function to the introduce_optimal_flex method.'''
         return max(actual_consumption + x)
+
         
