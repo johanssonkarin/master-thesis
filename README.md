@@ -1,7 +1,7 @@
 # Master Thesis Project
 Energy consumption model for the local grid level which is a part of a Master Thesis Project in Sociotechnical Systems Engineering at Uppsala University. This is just a short overview of the repository. For full background and extensive explaintions of the model please see the thesis. The model flow could be described somewhat like the illustation below:
 
-<img src="https://github.com/johanssonkarin/master-thesis/blob/master/modellflownew.png" width="400" height="auto" align="middle" />
+<img src="https://github.com/johanssonkarin/master-thesis/blob/master/images/modellflownew.png" width="400" height="auto" align="middle" />
 
 
 ## Repository navigation
@@ -39,14 +39,14 @@ This project is not yet licensed since it is not sure what will happen to the co
 The input tabs...
 
 
-<img src="https://github.com/johanssonkarin/master-thesis/blob/master/GUIinput1.png" width="600" height="auto" align="middle" />
+<img src="https://github.com/johanssonkarin/master-thesis/blob/master/images/GUIinput1.png" width="600" height="auto" align="middle" />
 
-<img src="https://github.com/johanssonkarin/master-thesis/blob/master/GUIinput2.png" width="600" height="auto" align="middle" />
+<img src="https://github.com/johanssonkarin/master-thesis/blob/master/images/GUIinput2.png" width="600" height="auto" align="middle" />
 
 
 ... and the output tabs.
 
 
-<img src="https://github.com/johanssonkarin/master-thesis/blob/master/GUIoutput1.png" width="600" height="auto" align="middle" />
+<img src="https://github.com/johanssonkarin/master-thesis/blob/master/images/GUIoutput1.png" width="600" height="auto" align="middle" />
 
-<img src="https://github.com/johanssonkarin/master-thesis/blob/master/GUIoutput2.png" width="600" height="auto" align="middle" />
+<img src="https://github.com/johanssonkarin/master-thesis/blob/master/images/GUIoutput2.png" width="600" height="auto" align="middle" />
