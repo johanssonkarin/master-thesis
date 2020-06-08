@@ -1,5 +1,5 @@
 # Master Thesis Project
-Energy consumption model for the local grid level which is a part of a Master Thesis Project in Sociotechnical Systems Engineering at Uppsala University. This is just a short overview of the repository. For full background and extensive explaintions of the model please see the thesis. The model flow could be described somewhat like the illustation below:
+Energy consumption model for the local grid level which is a part of a Master Thesis Project in Sociotechnical Systems Engineering at Uppsala University. This is just a short overview of the repository. For full background and extensive explainations of the model please see the thesis. The model flow could be described somewhat like the illustation below:
 
 <img src="https://github.com/johanssonkarin/master-thesis/blob/master/images/modellflownew.png" width="400" height="auto" align="middle" />
 
