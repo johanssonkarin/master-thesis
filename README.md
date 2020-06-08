@@ -15,7 +15,7 @@ Contains the different code-files which make up the model. At the top level gene
 ### data
 Due to the limited amount of data, the model is currently only developed for the Stockholm region. The model can be expanded to include other regions by adding another folder, carrying the same data structure as the Stockholm folder, to favor scalability. The folders ‘Residential’, ‘Office’ and ‘PV’ all include several csv-files which are named according to the classes or attributes to which the particular data corresponds to. The ‘EV’ folder contains transition matrices and distance data, for weekdays and weekends, which are used within the class for EV charging stations. 
 
-<img src="https://github.com/johanssonkarin/master-thesis/blob/master/folder_structure.png" width="250" height="auto" align="middle" />
+<img src="https://github.com/johanssonkarin/master-thesis/blob/master/images/folder_structure.png" width="250" height="auto" align="middle" />
 
 
 ## Built With
