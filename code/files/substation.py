@@ -410,7 +410,7 @@ class Substation:
         self.start = start
         self.end = end
         
-    def calculate_norm(self, percentiles = [1, 25, 50, 75, 90, 99] ):
+    def calculate_norm(self, percentiles = [1, 50, 90, 99, 99.5, 99.9] ):
         '''
         Method which calculates information about mean,
         standard deviation and percentiles of the 'AggregatedLoad'
